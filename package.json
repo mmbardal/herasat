@@ -1,5 +1,5 @@
 {
-  "name": "sanjesh-phd-we",
+  "name": "herasat",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.1.1",
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.12.7",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
@@ -17,10 +18,14 @@
     "prettier": "^3.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
-    "typescript-eslint": "^7.7.1"
+    "typescript-eslint": "^7.8.0"
   },
   "packageManager": "yarn@4.1.1",
   "dependencies": {
-    "fastify": "^4.26.2"
+    "@fastify/mysql": "^4.3.0",
+    "ajv": "^8.13.0",
+    "bcrypt": "^5.1.1",
+    "fastify": "^4.26.2",
+    "redis": "^4.6.13"
   }
 }

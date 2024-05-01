@@ -1,39 +1,17 @@
-import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { Server, IncomingMessage, ServerResponse } from 'http'
 
-const server: FastifyInstance = Fastify({})
+import fastify from 'fastify'
+import { Exep } from './apis/v1/login';
 
-const opts: RouteShorthandOptions = {
-  schema: {
-  
-    response: {
-      200: {
-        type: 'object',
-        properties: {
-          pong: {
-            type: 'string'
-          }
-        }
-      }
-    }
-  }
-}
+const fastifier = fastify()
 
-server.get('/ping', opts, async (request, reply) => {
-  return { pong: 'it worked!' }
-})
+fastifier.get
 
-const start = async () => {
-  try {
-    await server.listen({ port: 3000 })
 
-    const address = server.server.address()
-    const port = typeof address === 'string' ? address : address?.port
+fastifier.register(require('@fastify/mysql'), {
+    connectionString: 'mysql://root:2003@localhost/herasat',
+  })
 
-  } catch (err) {
-    server.log.error(err)
-    process.exit(1)
-  }
-}
+fastifier.register(require('./apis/v1/login'),{prefix:'/v1'});
 
-start()
+
+fastifier.listen({port: 3000});
