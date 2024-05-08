@@ -5,13 +5,13 @@ import { Http2ServerResponse } from "http2";
 import { schema, loginType } from "../../schema/panel";
 import { send } from "process";
 import { validate } from "../../utils";
-import { error } from "console";
+
 import * as bcrypt from "bcrypt";
 import { DB } from "../../db";
-import { ifError } from "node:assert";
+
 import { MySQLRowDataPacket } from "@fastify/mysql";
-import { createClient } from "redis";
-import { redisHost, redisPort } from "../../constatnts";
+
+
 import { randomUUID } from "node:crypto";
 import { logError } from "../../logger";
 import { RedisDB } from "../../redis_db";
