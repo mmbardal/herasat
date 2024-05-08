@@ -1,7 +1,7 @@
 const fs = require('fs')
 
 
-function logError(e:Error): void {
+export function logError(e:Error): void {
 
     const content = e.message;
     const stack = e.stack;
