@@ -11,19 +11,14 @@ import { DB } from "../../db";
 
 import { MySQLRowDataPacket } from "@fastify/mysql";
 
-
 import { randomUUID } from "node:crypto";
 import { logError } from "../../logger";
 import { RedisDB } from "../../redis_db";
 import { checkPermission } from "../../check";
 
-module.exports = function (
-  fastifier: fastify.FastifyInstance,
-  opts: fastify.RouteOptions,
-  done: fastify.HookHandlerDoneFunction
-) {
-  fastifier.post("/login", login);
-  done();
+module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
+  fastifier.post("/login",await login);
+
 };
 
 export class Exep extends Error {}

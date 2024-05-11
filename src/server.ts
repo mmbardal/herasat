@@ -31,6 +31,8 @@ import { mysqlHost, mysqlPass, mysqlUser } from "./constatnts";
   }
 
   fastifier.register(require("./apis/v1/login"), { prefix: "/v1" });
+  fastifier.register(require("./apis/v1/register"), { prefix: "/v1" });
+
   await fastifier.listen({ port: 3000 });
 
   console.log(`Server started on port ${3000}`);

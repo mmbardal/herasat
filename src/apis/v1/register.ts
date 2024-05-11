@@ -1,79 +1,165 @@
 import * as fastify from "fastify";
-import fastifies from "fastify";
-//import { IncomingMessage, ServerResponse } from 'http';
-import { Http2ServerResponse } from "http2";
-import { schema, loginType } from "../../schema/panel";
-import { send } from "process";
-import { validate } from "../../utils";
-import { error } from "console";
+import { registerType, schema } from "../../schema/panel";
 import * as bcrypt from "bcrypt";
+import { validate } from "../../utils";
+
 import { DB } from "../../db";
-import { ifError } from "node:assert";
+
 import { MySQLRowDataPacket } from "@fastify/mysql";
-import { createClient } from "redis";
-import { redisHost, redisPort } from "../../constatnts";
-import { randomUUID } from "node:crypto";
+
 import { logError } from "../../logger";
 import { RedisDB } from "../../redis_db";
 import { checkPermission } from "../../check";
 
-module.exports = function (
-  fastifier: fastify.FastifyInstance,
-  opts: fastify.RouteOptions,
-  done: fastify.HookHandlerDoneFunction
-) {
-  fastifier.post("/register", login);
-  done();
+module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
+  fastifier.post("/registerDeputy", await registerDeputy);
+  fastifier.post("/registerManager", await registerManager);
+  fastifier.post("/registerExpert", await registerExpert);
 };
 
-export class Exep extends Error {}
-
-async function login(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
-  var jbody: loginType;
+async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+  let jbody: registerType;
   try {
-    jbody = JSON.parse(request.body as string) as loginType;
+    jbody = JSON.parse(request.body as string) as registerType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: unknown) {
-    reply.code(400).send({ message: "badrequest" });
-    throw new Exep();
+  } catch (e: any) {
+    reply.code(400).send({ message: "badrequestt" });
+    console.log(e.message);
+    throw new Error();
   }
 
   const usernames = jbody.username;
   const password = jbody.password;
+  const token = jbody.token;
+  const deputy = jbody.deputyName;
 
   try {
-    const keys: string[] = await RedisDB.conn().sendCommand(["keys", `${usernames}*`]);
-    if (keys.length > 0) {
-      for (let i: number = 0; i <= keys.length - 1; i++) {
-        await RedisDB.conn().del(keys[i]);
-      }
+    const user = await RedisDB.conn()?.get(token);
+    if (user === null) {
+      reply.code(401).send({ message: "not authenticated" });
+      return;
     }
+    let userVal = JSON.parse(user);
+    if (userVal.role != "boss") {
+      reply.code(403).send({ message: "forbidden" });
+    }
+    if (!(await checkPermission(token, "AU"))) reply.code(403).send({ message: "forbidden" });
+    const [value] = await DB.conn.execute<MySQLRowDataPacket[]>("select deputy from user where deputy=?", [deputy]);
+    // console.log(1111);
+    // console.log(usernames);
+    if (value.length == 0) {
+      const passwordDatabase = await bcrypt.hash(password, 12);
+      await DB.conn.query(`insert into user (username, password, role, AU, parent_id, deputy)
+                           values (?, ?, "deputy", 1, ?, ?)`,[usernames,passwordDatabase,userVal.id,deputy]);
+      reply.code(201).send({ message: `${deputy} created` });
+    }
+    reply.code(406).send({ message: "a deputy with this name is exist" });
   } catch (e: any) {
     logError(e);
-    reply.code(500).send({ message: "rediserror" });
-    throw new Exep();
+    reply.code(500);
+    console.log(e.message);
+    throw new Error();
+  }
+}
+
+async function registerManager(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+  let jbody: registerType;
+  try {
+    jbody = JSON.parse(request.body as string) as registerType;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e: unknown) {
+    reply.code(400).send({ message: "badrequest" });
+    throw new Error();
   }
 
-  const [value] = await DB.conn.execute<MySQLRowDataPacket[]>("select * from user where username=?", [usernames]);
-  if (value.length == 0) {
-    reply.code(401).send({ message: "username or password is wrong" });
-  }
-
-  let compare: boolean = await bcrypt.compare(password, value[0].password);
-  if (!compare) {
-    reply.code(401).send({ message: "username or password is wrong" });
-  }
+  const usernames = jbody.username;
+  const password = jbody.password;
+  const token = jbody.token;
+  const management = jbody.managementName;
 
   try {
-    let token = usernames + randomUUID().toString();
-    await RedisDB.conn().set(token, JSON.stringify(value[0]));
-    // @ts-ignore
-    delete value[0].password;
-    delete value[0].id;
-    reply.code(200).send({ token: token, user: value[0] });
+    const user = await RedisDB.conn()?.get(token);
+    if (user === null) {
+      reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    let userVal = JSON.parse(user);
+    if (userVal.role != "deputy") {
+      reply.code(403).send({ message: "forbidden" });
+    }
+
+    if (!(await checkPermission(token, "AU"))) reply.code(403).send({ message: "forbidden" });
+
+    const [value] = await DB.conn.query<MySQLRowDataPacket[]>(`select * from user where deputy=? and management=?`, [
+      userVal.deputy,
+      management
+    ]);
+    console.log(userVal.deputy);
+    if (value.length == 0) {
+      const passwordDatabase = await bcrypt.hash(password, 12);
+
+      await DB.conn.query(`insert into user (username, password, role, AU, parent_id, deputy, management)
+                             values (?, ?, 'manager', 1, ?, ?,
+                                     ?)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,management]);
+
+      reply.code(201).send({ message: `${management} created` });
+    }
+    reply.code(406).send({ message: "a management with this name in this deputy is exist" });
   } catch (e: any) {
     logError(e);
-    reply.code(500).send({ message: "rediserror" });
-    throw new Exep();
+    reply.code(500);
+
+    throw new Error();
+  }
+}
+
+async function registerExpert(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+  let jbody: registerType;
+  try {
+    jbody = JSON.parse(request.body as string) as registerType;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e: unknown) {
+    reply.code(400).send({ message: "badrequest" });
+    throw new Error();
+  }
+
+  const usernames = jbody.username;
+  const password = jbody.password;
+  const token = jbody.token;
+  const expert = jbody.expertName;
+
+  try {
+    const user = await RedisDB.conn()?.get(token);
+    if (user === null) {
+      reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    let userVal = JSON.parse(user);
+    if (userVal.role != "manager") {
+      reply.code(403).send({ message: "forbidden" });
+    }
+
+    if (!(await checkPermission(token, "AU"))) reply.code(403).send({ message: "forbidden" });
+
+    const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+      "select * from user where deputy=? and management=? and expert = ?",
+      [userVal.deputy, userVal.management, expert]
+    );
+
+    if (value.length == 0) {
+      const passwordDatabase = await bcrypt.hash(password, 12);
+      console.log([usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management]);
+      await DB.conn.execute(`insert into user (username, password, role, AU, parent_id, deputy, management, expert)
+                             values (?, ?, 'expert', 0, ?, ?,
+                                     ?,?)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management,expert]);
+
+      reply.code(201).send({ message: `${expert} created` });
+    }
+    reply.code(406).send({ message: "a expert with this name in this management is exist" });
+  } catch (e: any) {
+    logError(e);
+    reply.code(500);
+    console.log(e.message);
+    throw new Error();
   }
 }

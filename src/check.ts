@@ -1,11 +1,7 @@
 import { DB } from "./db";
 import { MySQLRowDataPacket } from "@fastify/mysql";
-
 import { RedisDB } from "./redis_db";
-import { redisHost, redisPort } from "./constatnts";
-
 import { logError } from "./logger";
-import { error } from "console";
 
 export async function checkPermission(token: string, permission: string): Promise<boolean> {
   try {
@@ -19,10 +15,11 @@ export async function checkPermission(token: string, permission: string): Promis
   }
 }
 
-export async function checkExcelReadAccess(id: number, ExcelId: number): Promise<boolean> {
+export async function checkExcelReadAccess(id: number, ExcelId: number, access: string): Promise<boolean> {
   const [value] = await DB.conn.query<MySQLRowDataPacket[]>(`select *
-    from excelreadaccess
-    where excel_id = ${id}
-      and user_id = ${ExcelId}`);
+                                                             from excelreadwriteaccess
+                                                             where excel_id = ${id}
+                                                               and user_id = ${ExcelId}
+                                                               and access = ${access}`);
   return value.length != 0;
 }
