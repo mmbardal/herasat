@@ -2,7 +2,7 @@ import {Pool} from "mysql2/promise";
 
 import mysql from 'mysql2/promise';
 
-import {mysqlDatabase, mysqlHost, mysqlPass, mysqlPort, mysqlUser} from "./constatnts";
+import {mysqlDatabase, mysqlHost, mysqlPass, mysqlPort, mysqlUser} from "./constants";
 
 import assert from "node:assert";
 
