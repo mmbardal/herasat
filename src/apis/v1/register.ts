@@ -9,7 +9,7 @@ import { MySQLRowDataPacket } from "@fastify/mysql";
 
 import { logError } from "../../logger";
 import { RedisDB } from "../../redis_db";
-import { checkPermission } from "../../check";
+import { checkPermission, validateToken } from "../../check";
 
 module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
   fastifier.post("/registerDeputy", await registerDeputy);
@@ -34,7 +34,7 @@ async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.Fa
   const deputy = jbody.deputyName;
 
   try {
-    const user = await RedisDB.conn()?.get(token);
+    const user = await validateToken(token)
     if (user === null) {
       reply.code(401).send({ message: "not authenticated" });
       return;
@@ -78,7 +78,7 @@ async function registerManager(request: fastify.FastifyRequest, reply: fastify.F
   const management = jbody.managementName;
 
   try {
-    const user = await RedisDB.conn()?.get(token);
+    const user =await validateToken(token);
     if (user === null) {
       reply.code(401).send({ message: "not authenticated" });
       return;
@@ -129,7 +129,7 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
   const expert = jbody.expertName;
 
   try {
-    const user = await RedisDB.conn()?.get(token);
+    const user = await validateToken(token);
     if (user === null) {
       reply.code(401).send({ message: "not authenticated" });
       return;
@@ -149,9 +149,9 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
     if (value.length == 0) {
       const passwordDatabase = await bcrypt.hash(password, 12);
       console.log([usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management]);
-      await DB.conn.execute(`insert into user (username, password, role, AU, parent_id, deputy, management, expert)
+      await DB.conn.execute(`insert into user (username, password, role, AU, parent_id, deputy, management, expert,GE)
                              values (?, ?, 'expert', 0, ?, ?,
-                                     ?,?)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management,expert]);
+                                     ?,?,1)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management,expert]);
 
       reply.code(201).send({ message: `${expert} created` });
     }

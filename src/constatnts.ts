@@ -44,3 +44,9 @@ export const minioPass: string = releaseMode ? stringValue("MINIO_PASS") : "1234
 
 export const minioPort: number = 9003;
 
+
+export const dateRegex:string =`^1[34][0-9][0-9]\/(0?[1-9]|1[012])\/(0?[1-9]|[12][0-9]|3[01])$`
+export const nationalCodeRegex:string = `^\d{10}$`;
+export const phoneNumberRegex:string = `^09\d{9}$`;
+export const homeNumberRegex:string = `^0\d{10}$`;
+export const numbers:string = `^[0-9]+$`;

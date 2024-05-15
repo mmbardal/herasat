@@ -3,6 +3,16 @@ import { MySQLRowDataPacket } from "@fastify/mysql";
 import { RedisDB } from "./redis_db";
 import { logError } from "./logger";
 
+export async function validateToken(token: string): Promise<string | null> {
+  try {
+    return await RedisDB.conn()?.get(token);
+  } catch (e: any) {
+    logError(e);
+    console.log(e.message);
+    throw new Error();
+  }
+}
+
 export async function checkPermission(token: string, permission: string): Promise<boolean> {
   try {
     // @ts-ignore
@@ -16,10 +26,13 @@ export async function checkPermission(token: string, permission: string): Promis
 }
 
 export async function checkExcelReadAccess(id: number, ExcelId: number, access: string): Promise<boolean> {
-  const [value] = await DB.conn.query<MySQLRowDataPacket[]>(`select *
-                                                             from excelreadwriteaccess
-                                                             where excel_id = ${id}
-                                                               and user_id = ${ExcelId}
-                                                               and access = ${access}`);
+  const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+    `select *
+                                                             from access_permissions
+                                                             where table_id = ?
+                                                               and user_id = ?
+                                                               and permission = ?`,
+    [ExcelId, id, access]
+  );
   return value.length != 0;
 }
