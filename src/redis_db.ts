@@ -1,5 +1,5 @@
 import { createClient, RedisClientType, RedisFunctions, RedisModules, RedisScripts } from "redis";
-import { redisDb, redisHost, redisPort } from "./constatnts";
+import { redisDb, redisHost, redisPort } from "./constants";
 import assert from "node:assert";
 
 let redis: RedisClientType<RedisModules, RedisFunctions, RedisScripts> | null = null;

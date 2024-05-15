@@ -6,7 +6,7 @@ import { DB } from "../../db";
 import { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "../../logger";
 import { checkPermission, validateToken } from "../../check";
-import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "../../constatnts";
+import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "../../constants";
 
 module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
   fastifier.post("/newtable", await cTable);
