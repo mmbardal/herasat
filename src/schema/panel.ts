@@ -204,9 +204,69 @@ export interface GetType {
   token: string;
 }
 
+export enum searchActionType{
+  userSearch,tableSearch
+}
+const searchValidate = ajv.compile<searchType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","action","name"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "action":{"type":"number","enum": Object.values(searchActionType)},
+    "name":{"type":"string"}
+  }
+});
+
+export interface searchType {
+  token: string;
+  action:number;
+  name:string;
+}
+
+const changePermission = ajv.compile<changePermissionType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","action","permission","value"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "id":{"type":"number"},
+    "value":{"type":"number"},
+    "permission":{"type":"string"}
+  }
+});
+
+export interface changePermissionType {
+  token: string;
+  id:number;
+  permission:string;
+  value:number
+}
+
+const changeReadPermission = ajv.compile<changeReadWritePermissionType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","userId","tableId","value"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "userId":{"type":"number"},
+    "tableId":{"type":"number"},
+    "value":{"type":"string"}
+  }
+});
+
+export interface changeReadWritePermissionType {
+  token: string;
+  userId:number;
+  tableId:number;
+  value:string;
+}
 
 export const schema = {
   loginValidate,
   registerValidate,
-  generateTableValidate,approveValidate,getValidate
+  generateTableValidate,approveValidate,getValidate,searchValidate,changePermission
 };

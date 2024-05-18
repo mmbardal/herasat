@@ -1,12 +1,23 @@
 import * as fastify from "fastify";
-import { ApproveType, comboRegexGenerator, editTable, fields, GetType, newTable, Types } from "../../schema/panel";
+import {
+  ApproveType,
+  changePermissionType, changeReadWritePermissionType,
+  comboRegexGenerator,
+  editTable,
+  fields,
+  GetType,
+  newTable,
+  searchActionType,
+  searchType
+} from "../../schema/panel";
 
 import { DB } from "../../db";
 
 import { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "../../logger";
-import { checkPermission, validateToken } from "../../check";
+import { changeReadAccessFunc, checkPermission, validateToken } from "../../check";
 import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "../../constants";
+import * as bcrypt from "bcrypt";
 
 module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
   fastifier.post("/newtable", await cTable);
@@ -14,6 +25,9 @@ module.exports = async function (fastifier: fastify.FastifyInstance, done: fasti
   //fastifier.post("deletetable");
   fastifier.post("/gettable", await rTable);
   fastifier.post("/approvetable", await approve);
+  fastifier.post("/search", await search);
+  fastifier.post("/changePermission", await changePermission);
+  fastifier.post("/changeReadWritePermission", await changeReadWritePermission);
 };
 
 async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
@@ -41,6 +55,7 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
     let userVal = JSON.parse(user);
     if (await checkPermission(token, "GE")) {
       reply.code(403).send({ message: "forbidden" });
+      return;
     }
     const expertID = userVal.id;
 
@@ -89,7 +104,7 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       if (jbody.fields[i].model == "date") {
         jbody.fields[i]["regex"] = dateRegex;
       }
-      console.log(jbody.fields[i])
+      console.log(jbody.fields[i]);
     }
     const dataField: fields[] = jbody.fields;
     console.log(typeof expertID);
@@ -97,9 +112,10 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       `insert into all_tables (table_name_FA, change_lock, emp_id, manager_id, deputy_id, boss_id, approval_level,
                                write_permission, dead_line, columns_properties)
        values (?, 1, ?, ?, ?, ?, 0, 0, ?, ?)`,
-      [jbody.tableName, expertID, managerID, deputyID, bossID, new Date(jbody.deadline),JSON.stringify( jbody.fields)]
+      [jbody.tableName, expertID, managerID, deputyID, bossID, new Date(jbody.deadline), JSON.stringify(jbody.fields)]
     );
     reply.code(201).send({ message: `${jbody.tableName} defined` });
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);
@@ -133,6 +149,7 @@ async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
     let userVal = JSON.parse(user);
     if (await checkPermission(token, "GE")) {
       reply.code(403).send({ message: "forbidden" });
+      return;
     }
     const [step] = await DB.conn.query<MySQLRowDataPacket[]>(
       `select approval_level
@@ -141,8 +158,10 @@ async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
          and table_id = ?`,
       [userVal.id, tableID]
     );
-    if (step[0]["approval_level"] != 0)
+    if (step[0]["approval_level"] != 0) {
       reply.code(403).send({ message: `you can't changed table in step ${step[0]["approval_level"]}` });
+      return;
+    }
 
     const [managerIDRows] = await DB.conn.query<MySQLRowDataPacket[]>(
       `select parent_id
@@ -188,7 +207,7 @@ async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       if (jbody.fields[i].model == "date") {
         jbody.fields[i]["regex"] = dateRegex;
       }
-      console.log(jbody.fields[i])
+      console.log(jbody.fields[i]);
     }
     await DB.conn.query(
       `update all_tables
@@ -206,6 +225,7 @@ async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       [tableName, userVal.id, managerID, deputyID, bossID, new Date(deadline), fields, tableID]
     );
     reply.code(202).send({ message: `${tableName} updated` });
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);
@@ -238,10 +258,11 @@ async function rTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
     const [tables] = await DB.conn.query<MySQLRowDataPacket[]>(
       `select *
        from all_tables
-       where emp_id = ?`,
-      [userVal.id]
+       where emp_id = ? or manager_id = ? or deputy_id = ? or boss_id=?`,
+      [userVal.id,userVal.id,userVal.id,userVal.id]
     );
     reply.code(200).send(tables);
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);
@@ -316,11 +337,15 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
 
     if (table.length == 0) {
       reply.code(403).send({ message: "forbidden" });
+      return;
     }
     const step = table[0];
     switch (role) {
       case "boss":
-        if (step != 3) reply.code(403).send({ message: "forbidden" });
+        if (step != 3) {
+          reply.code(403).send({ message: "forbidden" });
+          return;
+        }
         if (func == "approve") {
           await DB.conn.query(
             `update all_tables
@@ -338,7 +363,10 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         }
         break;
       case "deputy":
-        if (step != 2) reply.code(403).send({ message: "forbidden" });
+        if (step != 2) {
+          reply.code(403).send({ message: "forbidden" });
+          return;
+        }
         if (func == "approve") {
           await DB.conn.query(
             `update all_tables
@@ -356,7 +384,10 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         }
         break;
       case "manager":
-        if (step != 1) reply.code(403).send({ message: "forbidden" });
+        if (step != 1) {
+          reply.code(403).send({ message: "forbidden" });
+          return;
+        }
         if (func == "approve") {
           await DB.conn.query(
             `update all_tables
@@ -374,7 +405,10 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         }
         break;
       case "expert":
-        if (step != 0) reply.code(403).send({ message: "forbidden" });
+        if (step != 0) {
+          reply.code(403).send({ message: "forbidden" });
+          return;
+        }
         if (func == "approve") {
           await DB.conn.query(
             `update all_tables
@@ -388,6 +422,181 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         break;
     }
     reply.code(202).send({ message: "approval step changed" });
+    return;
+  } catch (e: any) {
+    logError(e);
+    reply.code(500);
+    console.log(e.message);
+    throw new Error();
+  }
+}
+
+async function showTablePagination(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {}
+
+async function search(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+  let jbody: searchType;
+  try {
+    jbody = JSON.parse(request.body as string) as searchType;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e: any) {
+    reply.code(400).send({ message: "badrequestt" });
+    console.log(e.message);
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const action = jbody.action;
+  const name: string = jbody.name;
+
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    let userVal = JSON.parse(user);
+    if (action == searchActionType.userSearch) {
+      if (!(await checkPermission(token, "SU"))) {
+        reply.code(403).send({ message: "forbidden" });
+        return;
+      }
+      const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
+        "select username,active,expert,management,deputy,role from user where username LIKE  ?",
+        [`%${name}%`]
+      );
+      reply.code(200).send({
+        users: value
+      });
+      return;
+    }
+    if (action == searchActionType.tableSearch) {
+      if (!(await checkPermission(token, "ST"))) {
+        reply.code(403).send({ message: "forbidden" });
+        return;
+      }
+      const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
+        "select * from all_tables where all_tables.table_name_FA LIKE  ?",
+        [`%${name}%`]
+      );
+      reply.code(200).send({
+        tables: value
+      });
+      return;
+    }
+  } catch (e: any) {
+    logError(e);
+    reply.code(500);
+    console.log(e.message);
+    throw new Error();
+  }
+}
+
+async function changePermission(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+  let perms: string[]=[];
+  perms.push("SU","ST","AU","GE","changeReadAccess")
+  let jbody: changePermissionType;
+  try {
+    jbody = JSON.parse(request.body as string) as changePermissionType;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e: any) {
+    reply.code(400).send({ message: "badrequestt" });
+    console.log(e.message);
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const id = jbody.id;
+  const permission: string = jbody.permission;
+  const value :number = jbody.value
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    let userVal = JSON.parse(user);
+
+    if (!(await checkPermission(token, "CP"))) {
+      reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+    if(!perms.includes(permission)) {
+      reply.code(400).send({ message: "bad Request" });
+      return;
+    }
+    const [val] = await DB.conn.execute<MySQLRowDataPacket[]>(
+      `select *  from user  where id = ?` ,
+      [id]
+    );
+    if(val.length==0) {
+      reply.code(404).send({ message: "not found user" });
+      return;
+    }
+     await DB.conn.execute<MySQLRowDataPacket[]>(
+      `update user SET ${permission} = ? where id = ?` ,
+      [value,id]
+    );
+    reply.code(200).send({
+      user : id,permission: permission,value:value
+    });
+    return;
+  } catch (e: any) {
+    logError(e);
+    reply.code(500);
+    console.log(e.message);
+    throw new Error();
+  }
+}
+
+async function changeReadWritePermission(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+  let perms: string[]=[];
+  perms.push("read","write","both","none")
+  let jbody: changeReadWritePermissionType;
+  try {
+    jbody = JSON.parse(request.body as string) as changeReadWritePermissionType;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e: any) {
+    reply.code(400).send({ message: "badrequestt" });
+    console.log(e.message);
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const userId = jbody.userId;
+  const tableId: number = jbody.tableId;
+  const value :string = jbody.value;
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    let userVal = JSON.parse(user);
+
+    if (!(await checkPermission(token, "changeReadAccess"))) {
+      reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+    console.log(await checkPermission(token,"changeReadAccess"))
+    if(!perms.includes(value)) {
+      reply.code(400).send({ message: "bad Request" });
+      return;
+    }
+    const [findUser] =await  DB.conn.query<MySQLRowDataPacket[]>(`select * from user where id = ?`,[userId]);
+    if (findUser.length==0) {
+      reply.code(404).send({ message: "not found user" });
+      return;
+    }
+    const [findTable] =await  DB.conn.query<MySQLRowDataPacket[]>(`select * from all_tables where table_id = ?`,[tableId]);
+    if (findTable.length==0) {
+      reply.code(404).send({ message: "not found table" });
+      return;
+    }
+    await changeReadAccessFunc(tableId,userId,value);
+    reply.code(200).send({
+      user : userId,permission:value
+    });
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);

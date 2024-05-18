@@ -36,3 +36,20 @@ export async function checkExcelReadAccess(id: number, ExcelId: number, access: 
   );
   return value.length != 0;
 }
+
+
+export async function changeReadAccessFunc(tableId:number,userId:number,value:string){
+  const [val] = await DB.conn.execute<MySQLRowDataPacket[]>(
+    `select *  from access_permissions  where table_id = ? and user_id = ?` ,
+    [tableId,userId]
+  );
+  if(val.length!=0) {
+    await DB.conn.execute<MySQLRowDataPacket[]>(
+      `update access_permissions SET permission = ? where user_id = ? and table_id= ?` ,
+      [value,userId,tableId]
+    );
+  }
+
+  await DB.conn.query<MySQLRowDataPacket[]>(`insert into access_permissions(table_id, user_id, permission) values (?,?,?)`,[tableId,userId,value]);
+
+}

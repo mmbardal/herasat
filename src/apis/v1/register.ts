@@ -42,8 +42,12 @@ async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.Fa
     let userVal = JSON.parse(user);
     if (userVal.role != "boss") {
       reply.code(403).send({ message: "forbidden" });
+      return;
     }
-    if (!(await checkPermission(token, "AU"))) reply.code(403).send({ message: "forbidden" });
+    if (!(await checkPermission(token, "AU"))) {
+      reply.code(403).send({ message: "forbidden" });
+      return;
+    }
     const [value] = await DB.conn.execute<MySQLRowDataPacket[]>("select deputy from user where deputy=?", [deputy]);
     // console.log(1111);
     // console.log(usernames);
@@ -52,8 +56,10 @@ async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.Fa
       await DB.conn.query(`insert into user (username, password, role, AU, parent_id, deputy)
                            values (?, ?, "deputy", 1, ?, ?)`,[usernames,passwordDatabase,userVal.id,deputy]);
       reply.code(201).send({ message: `${deputy} created` });
+      return;
     }
     reply.code(406).send({ message: "a deputy with this name is exist" });
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);
@@ -86,9 +92,13 @@ async function registerManager(request: fastify.FastifyRequest, reply: fastify.F
     let userVal = JSON.parse(user);
     if (userVal.role != "deputy") {
       reply.code(403).send({ message: "forbidden" });
+      return;
     }
 
-    if (!(await checkPermission(token, "AU"))) reply.code(403).send({ message: "forbidden" });
+    if (!(await checkPermission(token, "AU"))) {
+      reply.code(403).send({ message: "forbidden" });
+      return;
+    }
 
     const [value] = await DB.conn.query<MySQLRowDataPacket[]>(`select * from user where deputy=? and management=?`, [
       userVal.deputy,
@@ -103,8 +113,10 @@ async function registerManager(request: fastify.FastifyRequest, reply: fastify.F
                                      ?)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,management]);
 
       reply.code(201).send({ message: `${management} created` });
+      return;
     }
     reply.code(406).send({ message: "a management with this name in this deputy is exist" });
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);
@@ -137,9 +149,13 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
     let userVal = JSON.parse(user);
     if (userVal.role != "manager") {
       reply.code(403).send({ message: "forbidden" });
+      return;
     }
 
-    if (!(await checkPermission(token, "AU"))) reply.code(403).send({ message: "forbidden" });
+    if (!(await checkPermission(token, "AU"))) {
+      reply.code(403).send({ message: "forbidden" });
+      return;
+    }
 
     const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
       "select * from user where deputy=? and management=? and expert = ?",
@@ -154,8 +170,10 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
                                      ?,?,1)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management,expert]);
 
       reply.code(201).send({ message: `${expert} created` });
+      return;
     }
     reply.code(406).send({ message: "a expert with this name in this management is exist" });
+    return;
   } catch (e: any) {
     logError(e);
     reply.code(500);

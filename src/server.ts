@@ -32,6 +32,7 @@ import excelPlugin, { exportTableToExcel } from "./excelJS";
 
   fastifier.register(require("./apis/v1/login"), { prefix: "/v1" });
   fastifier.register(require("./apis/v1/register"), { prefix: "/v1" });
+  fastifier.register(require("./apis/v1/panel"), { prefix: "/v1" });
   fastifier.register(excelPlugin);
 
   await fastifier.listen({ port: 3000 });
