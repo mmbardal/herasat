@@ -204,6 +204,74 @@ export interface GetType {
   token: string;
 }
 
+const getUserValidate = ajv.compile<GetUserType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","username"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "username": { "type": "string" },
+
+  }
+});
+
+export interface GetUserType {
+  token: string;
+  username:string
+}
+
+const getTableValidate = ajv.compile<GetTableType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","id"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "id": { "type": "number" },
+
+  }
+});
+
+export interface GetTableType {
+  token: string;
+  id:number;
+}
+
+const getManagerValidate = ajv.compile<GetManagerType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","deputyId"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "deputy":{"type":"string"}
+  }
+});
+
+export interface GetManagerType {
+  token: string;
+  deputy:string;
+}
+
+const getEmpValidate = ajv.compile<GetEmpType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","deputy","manager"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "deputyID":{"type":"string"},
+    "managerID":{"type":"string"},
+  }
+});
+
+export interface GetEmpType {
+  token: string;
+  deputy:string;
+  manager:string;
+}
+
 export enum searchActionType{
   userSearch,tableSearch
 }
@@ -263,6 +331,27 @@ export interface changeReadWritePermissionType {
   userId:number;
   tableId:number;
   value:string;
+}
+
+
+const changePassword = ajv.compile<changePasswordType>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token","oldPass","newPass"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "oldPass":{"type":"string"},
+    "newPass":{"type":"string"},
+
+  }
+});
+
+export interface changePasswordType {
+  token: string;
+  oldPass:string;
+  newPass:string;
+
 }
 
 export const schema = {

@@ -1,18 +1,13 @@
-const fs = require('fs')
+import * as fs from "node:fs";
 
-
-export function logError(e:Error): void {
-
-    const content = e.message;
-    const stack = e.stack;
-
-    fs.writeFile('errors.log',`${Date.now()} - Message: ${content} \n Stack:\n${stack}\n\n`, (err: Error) => {
-        if (err) {
-            console.error(err)
-            return
-        }
-        //file written successfully
-    })
-
-
+export function logError(e: unknown): void {
+  fs.writeFile(
+    "errors.log",
+    `${Date.now()} - Message: ${(e as Error).message} \n Stack:\n${(e as Error).stack}\n\n`,
+    (err) => {
+      if (err !== null) {
+        console.error(err)
+      }
+    }
+  );
 }

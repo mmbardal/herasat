@@ -1,41 +1,41 @@
 import fastify from "fastify";
-import { RedisDB } from "./redis_db";
-import { DB } from "./db";
-import { mysqlHost, mysqlPass, mysqlUser } from "./constants";
-import excelPlugin, { exportTableToExcel } from "./excelJS";
+import { RedisDB } from "@/redis_db";
+import { DB } from "@/db";
+import { mysqlHost, mysqlPass, mysqlUser } from "@/constants";
+import { PanelAPI } from "@/apis/v1/panel";
+import { LoginAPI } from "@/apis/v1/login";
+import { RegisterAPI } from "@/apis/v1/register";
+// import excelPlugin, { exportTableToExcel } from "@/excelJS";
 
-(async () => {
-  const fastifier = fastify();
+const fastifier = fastify();
 
-  try {
-    await RedisDB.init();
-  } catch (e: any) {
-    //logError(e);
-    console.log("DB Error1");
-    process.exit(1);
-  }
+try {
+  await RedisDB.init();
+} catch (e: unknown) {
+  //logError(e);
+  console.log("DB Error1");
+  process.exit(1);
+}
 
-  try {
-    DB.init(10);
-    const resault = await DB.conn.query("SELECT 1;");
-    console.log(resault);
-  } catch (e) {
-    console.log("DB Error");
-    console.log(`Connection: ${mysqlHost}:3306`);
+try {
+  DB.init(10);
+   await DB.conn.query("SELECT 1;");
+} catch (e) {
+  console.log("DB Error");
+  console.log(`Connection: ${mysqlHost}:3306`);
 
-    console.log(`Username: ${mysqlUser}`);
-    console.log(`Username: ${mysqlPass}`);
-    console.log(`Exception: ${e}`);
-    console.log("------------------------------------------------");
-    process.exit(1);
-  }
+  console.log(`Username: ${mysqlUser}`);
+  console.log(`Username: ${mysqlPass}`);
+  console.log(`Exception: ${e}`);
+  console.log("------------------------------------------------");
+  process.exit(1);
+}
 
-  fastifier.register(require("./apis/v1/login"), { prefix: "/v1" });
-  fastifier.register(require("./apis/v1/register"), { prefix: "/v1" });
-  fastifier.register(require("./apis/v1/panel"), { prefix: "/v1" });
-  fastifier.register(excelPlugin);
+LoginAPI(fastifier, "/v1");
+PanelAPI(fastifier, "/v1");
+RegisterAPI(fastifier, "/v1");
+// await fastifier.register(excelPlugin);
 
-  await fastifier.listen({ port: 3000 });
+await fastifier.listen({ port: 3000 });
 
-  console.log(`Server started on port ${3000}`);
-})();
+console.log(`Server started on port 3000`);

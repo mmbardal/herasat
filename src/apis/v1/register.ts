@@ -11,11 +11,7 @@ import { logError } from "../../logger";
 import { RedisDB } from "../../redis_db";
 import { checkPermission, validateToken } from "../../check";
 
-module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
-  fastifier.post("/registerDeputy", await registerDeputy);
-  fastifier.post("/registerManager", await registerManager);
-  fastifier.post("/registerExpert", await registerExpert);
-};
+
 
 async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
   let jbody: registerType;
@@ -180,4 +176,9 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
     console.log(e.message);
     throw new Error();
   }
+}
+export  function RegisterAPI (fastifier: fastify.FastifyInstance, prefix?: string):void {
+  fastifier.post(`${prefix ?? ''}/registerDeputy`,  registerDeputy);
+  fastifier.post(`${prefix ?? ''}/registerManager`,  registerManager);
+  fastifier.post(`${prefix ?? ''}/registerExpert`,  registerExpert);
 }

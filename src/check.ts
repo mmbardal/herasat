@@ -1,13 +1,13 @@
-import { DB } from "./db";
+import { DB } from "@/db";
 import { MySQLRowDataPacket } from "@fastify/mysql";
-import { RedisDB } from "./redis_db";
-import { logError } from "./logger";
+import { RedisDB } from "@/redis_db";
+import { logError } from "@/logger";
 
 export async function validateToken(token: string): Promise<string | null> {
   try {
-    return await RedisDB.conn()?.get(token);
-  } catch (e: any) {
-    logError(e);
+    return await RedisDB.conn().get(token);
+  } catch (e: unknown) {
+    logError(e as Error);
     console.log(e.message);
     throw new Error();
   }
@@ -15,12 +15,11 @@ export async function validateToken(token: string): Promise<string | null> {
 
 export async function checkPermission(token: string, permission: string): Promise<boolean> {
   try {
-    // @ts-ignore
-    const value: string = await RedisDB.conn().get(token);
-    const user = JSON.parse(value);
+    const value = await RedisDB.conn().get(token);
+    const user = JSON.parse(value ?? '') as Record<string, unknown>;
     return user[permission] == 1;
-  } catch (e: any) {
-    logError(e);
+  } catch (e: unknown) {
+    logError(e as Error);
     throw new Error();
   }
 }
@@ -48,6 +47,7 @@ export async function changeReadAccessFunc(tableId:number,userId:number,value:st
       `update access_permissions SET permission = ? where user_id = ? and table_id= ?` ,
       [value,userId,tableId]
     );
+    return;
   }
 
   await DB.conn.query<MySQLRowDataPacket[]>(`insert into access_permissions(table_id, user_id, permission) values (?,?,?)`,[tableId,userId,value]);
