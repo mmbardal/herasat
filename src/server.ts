@@ -1,11 +1,15 @@
 import fastify from "fastify";
+
 import { RedisDB } from "@/redis_db";
 import { DB } from "@/db";
 import { mysqlHost, mysqlPass, mysqlUser } from "@/constants";
 import { PanelAPI } from "@/apis/v1/panel";
 import { LoginAPI } from "@/apis/v1/login";
 import { RegisterAPI } from "@/apis/v1/register";
-// import excelPlugin, { exportTableToExcel } from "@/excelJS";
+
+import excelPluginDownload from "@/excel_download";
+import excelPluginUpload from "@/excel_upload";
+
 
 const fastifier = fastify();
 
@@ -31,10 +35,16 @@ try {
   process.exit(1);
 }
 
+
 LoginAPI(fastifier, "/v1");
 PanelAPI(fastifier, "/v1");
 RegisterAPI(fastifier, "/v1");
-// await fastifier.register(excelPlugin);
+
+
+  
+  //fastifier.register(excelPluginUpload)
+  //fastifier.register(excelPluginDownload);
+
 
 await fastifier.listen({ port: 3000 });
 
