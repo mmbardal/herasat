@@ -2,7 +2,8 @@ import fastify from "fastify";
 import { RedisDB } from "./redis_db";
 import { DB } from "./db";
 import { mysqlHost, mysqlPass, mysqlUser } from "./constants";
-import excelPlugin, { exportTableToExcel } from "./excelJS";
+import excelPluginDownload from "./excel_download";
+import excelPluginUpload from "./excel_upload";
 
 (async () => {
   const fastifier = fastify();
@@ -32,7 +33,8 @@ import excelPlugin, { exportTableToExcel } from "./excelJS";
 
   fastifier.register(require("./apis/v1/login"), { prefix: "/v1" });
   fastifier.register(require("./apis/v1/register"), { prefix: "/v1" });
-  fastifier.register(excelPlugin);
+  fastifier.register(excelPluginUpload)
+  fastifier.register(excelPluginDownload);
 
   await fastifier.listen({ port: 3000 });
 
