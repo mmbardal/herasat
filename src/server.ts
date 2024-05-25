@@ -33,6 +33,7 @@ import excelPluginUpload from "./excel_upload";
 
   fastifier.register(require("./apis/v1/login"), { prefix: "/v1" });
   fastifier.register(require("./apis/v1/register"), { prefix: "/v1" });
+  fastifier.register(require("./apis/v1/panel"), { prefix: "/v1" });
   fastifier.register(excelPluginUpload)
   fastifier.register(excelPluginDownload);
 

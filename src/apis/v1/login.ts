@@ -36,7 +36,21 @@ async function login(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
   const usernames = jbody.username;
   const password = jbody.password;
 
-  try {
+
+
+  const [value] = await DB.conn.execute<MySQLRowDataPacket[]>("select * from user where username=?", [usernames]);
+  if (value.length == 0) {
+    reply.code(401).send({ message: "username or password is wrong" });
+    return;
+  }
+
+  let compare: boolean = await bcrypt.compare(password, value[0].password);
+  if (!compare) {
+    reply.code(401).send({ message: "username or password is wrong" });
+    return;
+  }
+
+  try{
     const keys: string[] = await RedisDB.conn().sendCommand(["keys", `${usernames}*`]);
     if (keys.length > 0) {
       for (let i: number = 0; i <= keys.length - 1; i++) {
@@ -47,16 +61,6 @@ async function login(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
     logError(e);
     reply.code(500).send({ message: "rediserror" });
     throw new Exep();
-  }
-
-  const [value] = await DB.conn.execute<MySQLRowDataPacket[]>("select * from user where username=?", [usernames]);
-  if (value.length == 0) {
-    reply.code(401).send({ message: "username or password is wrong" });
-  }
-
-  let compare: boolean = await bcrypt.compare(password, value[0].password);
-  if (!compare) {
-    reply.code(401).send({ message: "username or password is wrong" });
   }
 
   try {

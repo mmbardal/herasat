@@ -35,7 +35,7 @@ export const mysqlPort: number = 3306;
 export const redisHost: string = releaseMode ? stringValue("REDIS_HOST") : "192.168.101.92";
 export const redisPort: number = 6379;
 
-export const redisDb: number = 1;
+export const redisDb: number = 7;
 
 //Minio configs
 export const minioHost: string = releaseMode ? stringValue("MINIO_HOST") : "192.168.101.92";
