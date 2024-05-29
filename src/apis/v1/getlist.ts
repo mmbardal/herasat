@@ -1,30 +1,46 @@
-import * as fastify from "fastify";
-import { GetEmpType, GetManagerType, GetTableType, GetType, GetUserType } from "../../schema/panel";
+import type * as fastify from "fastify";
+import type { GetEmpType, GetManagerType, GetTableType, GetType, GetUserType } from "@/schema/panel";
+import { DB } from "@/db";
+import type { MySQLRowDataPacket } from "@fastify/mysql";
+import { logError } from "@/logger";
+import { checkPermission, validateToken } from "@/check";
+import type { getWriteAccess } from "@/schema/vahed";
 
-import { DB } from "../../db";
+export interface userInterface {
+  id: number;
+  first_name: string;
+  last_name: string;
+  active: number;
+  username: string;
+  password: string;
+  role: string;
+  parent_id: number;
+  SU: number;
+  ST: number;
+  AU: number;
+  changeReadAccess: number;
+  CP: number;
+  GE: number;
+  deputy: string;
+  management: string;
+  expert: number;
+  branch: string;
+  province: string;
+}
 
-import { MySQLRowDataPacket } from "@fastify/mysql";
-import { logError } from "../../logger";
-import { checkPermission, validateToken } from "../../check";
+interface Prov {
+  province: string;
+  branches: string[];
+}
 
-module.exports = async function (fastifier: fastify.FastifyInstance, done: fastify.HookHandlerDoneFunction) {
-  fastifier.post("/getemp", await emp);
-  fastifier.post("/getprov", await prov);
-  fastifier.post("/getdeputy", await deputy);
-  fastifier.post("/getmanagement", await management);
-  fastifier.post("/getbranch", await branch);
-  fastifier.post("/getuser", await user);
-  fastifier.post("/gettable", await table);
-};
-
-async function deputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function getDeputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetType;
   try {
     jbody = JSON.parse(request.body as string) as GetType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: any) {
-    reply.code(400).send({ message: "badrequestt" });
-    console.log(e.message);
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+    logError(e);
     throw new Error();
   }
 
@@ -33,31 +49,29 @@ async function deputy(request: fastify.FastifyRequest, reply: fastify.FastifyRep
   try {
     const user = await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
 
     const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(`select id, deputy
                                                                  from user
                                                                  where role = 'deputy' `);
-    reply.code(200).send({ deputies: value });
-  } catch (e: any) {
+    await reply.code(200).send({ deputies: value });
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
+    await reply.code(500);
     throw new Error();
   }
 }
 
-async function management(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function getManagement(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetManagerType;
   try {
     jbody = JSON.parse(request.body as string) as GetManagerType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: any) {
-    reply.code(400).send({ message: "badrequestt" });
-    console.log(e.message);
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+    logError(e);
     throw new Error();
   }
 
@@ -67,10 +81,10 @@ async function management(request: fastify.FastifyRequest, reply: fastify.Fastif
   try {
     const user = await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
+    // let userVal = JSON.parse(user) as user;
 
     const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
       `select id, management
@@ -79,23 +93,22 @@ async function management(request: fastify.FastifyRequest, reply: fastify.Fastif
          and role = 'manager'`,
       [deputy]
     );
-    reply.code(200).send({ managements: value });
-  } catch (e: any) {
+    await reply.code(200).send({ managements: value });
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
+    await reply.code(500);
     throw new Error();
   }
 }
 
-async function emp(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function emp(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetEmpType;
   try {
     jbody = JSON.parse(request.body as string) as GetEmpType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: any) {
-    reply.code(400).send({ message: "badrequestt" });
-    console.log(e.message);
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+    logError(e);
     throw new Error();
   }
 
@@ -105,35 +118,32 @@ async function emp(request: fastify.FastifyRequest, reply: fastify.FastifyReply)
   try {
     const user = await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
-
     const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
       `select id, expert
-                                                                 from user
-                                                                 where deputy = ?
-                                                                   and management = ? `,
+       from user
+       where deputy = ?
+         and management = ? `,
       [deputy, management]
     );
-    reply.code(200).send({ experts: value });
-  } catch (e: any) {
+    await reply.code(200).send({ experts: value });
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
+    await reply.code(500);
     throw new Error();
   }
 }
 
-async function user(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetUserType;
   try {
     jbody = JSON.parse(request.body as string) as GetUserType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: any) {
-    reply.code(400).send({ message: "badrequestt" });
-    console.log(e.message);
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+    logError(e);
     throw new Error();
   }
 
@@ -142,12 +152,12 @@ async function user(request: fastify.FastifyRequest, reply: fastify.FastifyReply
   try {
     const user = await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
-    if(await checkPermission(token , "CP")){
-      const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(`select id,
+    if (await checkPermission(token, "CP")) {
+      const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
+        `select id,
                                                                           username,
                                                                           role,
                                                                           parent_id,
@@ -158,30 +168,30 @@ async function user(request: fastify.FastifyRequest, reply: fastify.FastifyReply
                                                                           changeReadAccess,
                                                                           GE
                                                                    from user
-      `);
-      reply.code(200).send({ user: value[0] });
+                                                                   where username = ?`,
+        [username]
+      );
+      await reply.code(200).send({ user: value[0] });
       return;
-    }else{
-      reply.code(403).send({ message: "forbidden" });
+    } else {
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
-
-  } catch (e: any) {
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
+    await reply.code(500);
     throw new Error();
   }
 }
 
-async function table(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function table(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetTableType;
   try {
     jbody = JSON.parse(request.body as string) as GetTableType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: any) {
-    reply.code(400).send({ message: "badrequestt" });
-    console.log(e.message);
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+    logError(e);
     throw new Error();
   }
 
@@ -190,26 +200,126 @@ async function table(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
   try {
     const user = await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
-
-    const [value] =await DB.conn.query<MySQLRowDataPacket[]>(`select * from all_tables where emp_id = ?`,[id]);
-    reply.code(200).send({tables:value});
+    const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+      `select *
+       from all_tables
+       where emp_id = ?`,
+      [id]
+    );
+    await reply.code(200).send({ tables: value });
     return;
-  } catch (e: any) {
+  } catch (e:unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
+    await reply.code(500);
     throw new Error();
   }
 }
-//todo show table section
-// async function prov(request: fastify.FastifyRequest, reply: fastify.FastifyReply){
-//
-// }
-//todo show table section
-// async function branch(request: fastify.FastifyRequest, reply: fastify.FastifyReply){
-//
-// }
+
+async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  let jbody: GetType;
+  try {
+    jbody = JSON.parse(request.body as string) as GetType;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e:unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+    logError(e);
+    throw new Error();
+  }
+
+  const token = jbody.token;
+
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    const [value] = (await DB.conn.query<MySQLRowDataPacket[]>(
+      `select distinct province
+       from user
+       where province is not null`
+    )) as unknown as userInterface;
+    const listProv: Prov[] = [];
+    for (const item of value) {
+      const prov: Prov = { province: "default", branches: [] };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+      prov.province = item.province;
+      listProv.push(prov);
+    }
+    for (const item of listProv) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      const [subUser] = (await DB.conn.query<MySQLRowDataPacket[]>(
+        `select branch
+         from user
+         where province = ${item.province}`
+      )) as unknown as userInterface;
+      for (const item1 of subUser) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-member-access
+        item.branches.push(item1.branch);
+      }
+    }
+    await reply.code(200).send({ provinces: listProv });
+    return;
+  } catch (e:unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
+}
+
+async function vahedTablePermission(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  let jbody: getWriteAccess;
+  try {
+    jbody = JSON.parse(request.body as string) as getWriteAccess;
+    // validate<loginType>(jbody,schema.loginValidate);
+  } catch (e:unknown) {
+    await reply.code(400).send({ message: "badrequest" });
+   logError(e);
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const tableId = jbody.tableId;
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    if (!(await checkPermission(token, "changeReadAccess"))) {
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+
+    const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
+      `select user.id, access_permissions.permission
+       from user
+                left join access_permissions on user.id = access_permissions.user_id and access_permissions.table_id = ?
+
+      `,
+      [tableId]
+    );
+    await reply.code(200).send({ users: value });
+  } catch (e:unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
+}
+
+export function GetListAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
+  fastifier.post(`${prefix ?? ""}/getemp`, emp);
+  fastifier.post(`${prefix ?? ""}/getdeputy`, getDeputy);
+  fastifier.post(`${prefix ?? ""}/getmanagement`, getManagement);
+  fastifier.post(`${prefix ?? ""}/getuser`, getUser);
+  fastifier.post(`${prefix ?? ""}/gettable`, table);
+  fastifier.post(`${prefix ?? ""}/getprov`, getProv);
+  fastifier.post(`${prefix ?? ""}/getvahedTablePermission`, vahedTablePermission);
+}

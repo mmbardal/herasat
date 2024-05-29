@@ -1,36 +1,40 @@
 import { DB } from "./db";
-import { MySQLRowDataPacket } from "@fastify/mysql";
-import * as ExcelJS from 'exceljs';
+import type { MySQLRowDataPacket } from "@fastify/mysql";
+import * as ExcelJS from "exceljs";
+import type { FastifyPluginCallback } from "fastify";
 
 // Function to query database, convert to Excel, and download
 export async function exportTableToExcel(tableID: string, filename: string) {
-    try {
-        // Query the table to get the headers JSON
-        const [jsonRows] = await DB.conn.execute<MySQLRowDataPacket[]>(
-            `SELECT columns_properties FROM all_tables WHERE table_id = ?;`, [tableID]);
+  try {
+    // Query the table to get the headers JSON
+    const [jsonRows] = await DB.conn.execute<MySQLRowDataPacket[]>(
+      `SELECT columns_properties
+       FROM all_tables
+       WHERE table_id = ?;`,
+      [tableID]
+    );
 
-        if (jsonRows.length === 0 || !jsonRows[0].columns_properties) {
-            throw new Error("Table ID not found or headers not available");
-        }
+    if (jsonRows.length === 0 || !jsonRows[0].columns_properties) {
+      throw new Error("Table ID not found or headers not available");
+    }
 
-        const columnsProperties = jsonRows[0].columns_properties;
-        // Extract column names from JSON objects
-        const headerNames: string[] = columnsProperties.map((item: any) => item.name);
+    const columnsProperties = jsonRows[0].columns_properties;
+    // Extract column names from JSON objects
+    const headerNames: string[] = columnsProperties.map((item: any) => item.name);
 
-        // Create a new workbook
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Sheet1');
+    // Create a new workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
 
-        // Add headers as the first row
-        worksheet.addRow(headerNames);
+    // Add headers as the first row
+    worksheet.addRow(headerNames);
 
+    // Add enough rows to ensure that all cells in the column are initialized
+    // for (let i = 0; i < 100; i++) { // Assuming you want to initialize 10 rows
+    //     worksheet.addRow(["a","a","c","b"]);
+    // }
 
-        // Add enough rows to ensure that all cells in the column are initialized
-        // for (let i = 0; i < 100; i++) { // Assuming you want to initialize 10 rows
-        //     worksheet.addRow(["a","a","c","b"]);
-        // } 
-
-        // Set column validations based on model and apply not nullable rule
+    // Set column validations based on model and apply not nullable rule
     //     columnsProperties.forEach((item: any, index: number) => {
     //       const columnIndex = index + 1; // ExcelJS column index starts from 1
     //       const column = worksheet.getColumn(columnIndex);
@@ -59,8 +63,8 @@ export async function exportTableToExcel(tableID: string, filename: string) {
     //           //     error: `Value must be one of:`
     //           //   }
     //           //   //colNum = parseInt(cell.col);
-    //           // }); 
-              
+    //           // });
+
     //           //for (let j = 2; j <= 50; j++)
     //           //{
     //             //let cellName = numberToColumnTitle(colNum) + j;
@@ -91,63 +95,57 @@ export async function exportTableToExcel(tableID: string, filename: string) {
     //       });
     //   });
 
+    // Execute the query to get the data
 
-        // Execute the query to get the data
+    // const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(`SELECT * FROM t_${tableID}`);
 
-        // const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(`SELECT * FROM t_${tableID}`);
+    // // Add rows
+    // for (const row of rows) {
+    //     const rowData: any[] = [];
+    //     for (const key in row) {
+    //         rowData.push(row[key]);
+    //     }
+    //     worksheet.addRow(rowData);
+    // }
 
-        // // Add rows
-        // for (const row of rows) {
-        //     const rowData: any[] = [];
-        //     for (const key in row) {
-        //         rowData.push(row[key]);
-        //     }
-        //     worksheet.addRow(rowData);
-        // }
+    // Write to file
+    await workbook.xlsx.writeFile(filename);
 
-        
-
-        // Write to file
-        await workbook.xlsx.writeFile(filename);
-
-        console.log('Excel file exported successfully!');
-    } catch (error) {
-        console.error('Error exporting Excel file:', error);
-        throw error;
-    }
+    console.log("Excel file exported successfully!");
+  } catch (error) {
+    console.error("Error exporting Excel file:", error);
+    throw error;
+  }
 }
 
 function numberToColumnTitle(n: number) {
-  let result = '';
+  let result = "";
   while (n > 0) {
-      let remainder = (n - 1) % 26;
-      result = String.fromCharCode(65 + remainder) + result;
-      n = Math.floor((n - 1) / 26);
+    let remainder = (n - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    n = Math.floor((n - 1) / 26);
   }
   return result;
 }
 
-import { FastifyPluginCallback } from 'fastify';
-import { numbers } from "./constants";
-
 interface RequestParams {
-    tableID: string;
+  tableID: string;
 }
 
 const excelPluginDownload: FastifyPluginCallback = (fastify, options, done) => {
-    // Define the route to export Excel file
-    fastify.post<{ Params: RequestParams }>('/export-excel/:tableID', async (request, reply) => {
-        const tableID = request.params.tableID;
-        const filename = 'export.xlsx'; // You can customize the filename as needed
-        try {
-            await exportTableToExcel(tableID, filename);
-            reply.send({ success: true, message: 'Excel file exported successfully' });
-        } catch (error) {
-            reply.status(500).send({ success: false, message: 'Error exporting Excel file', error });
-        }
-    });
+  // Define the route to export Excel file
+  fastify.post<{ Params: RequestParams }>("/export-excel/:tableID", async (request, reply) => {
+    const tableID = request.params.tableID;
+    const filename = "export.xlsx"; // You can customize the filename as needed
+    try {
+      await exportTableToExcel(tableID, filename);
+      reply.send({ success: true, message: "Excel file exported successfully" });
+    } catch (error) {
+      reply.status(500).send({ success: false, message: "Error exporting Excel file", error });
+    }
+  });
 
-    done();
+  done();
 };
 
 export default excelPluginDownload;

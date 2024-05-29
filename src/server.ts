@@ -9,6 +9,7 @@ import { RegisterAPI } from "@/apis/v1/register";
 
 import excelPluginDownload from "@/excel_download";
 import excelPluginUpload from "@/excel_upload";
+import { GetListAPI } from "@/apis/v1/getlist";
 
 
 const fastifier = fastify();
@@ -39,6 +40,7 @@ try {
 LoginAPI(fastifier, "/v1");
 PanelAPI(fastifier, "/v1");
 RegisterAPI(fastifier, "/v1");
+GetListAPI(fastifier, "/v1");
 
 
   
