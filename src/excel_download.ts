@@ -35,7 +35,7 @@ export async function exportTableToExcel(tableID: string): Promise<Buffer> {
     worksheet.addRow(headerNames);
 
     // Execute the query to get the data
-    const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(`SELECT * FROM t_${tableID}`);
+    const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(`SELECT * FROM table_${tableID}`);
 
     // Add rows
     for (const row of rows) {

@@ -227,18 +227,20 @@ export interface GetUserType {
 const getTableValidate = ajv.compile<GetTableType>({
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["token","id"],
+  "required": ["token","offset"],
   "additionalProperties": false,
   "properties": {
     "token": { "type": "string" },
-    "id": { "type": "number" },
+    
+    "offset": { "type": "number" },
 
   }
 });
 
 export interface GetTableType {
   token: string;
-  id:number;
+  offset:number;
+  
 }
 
 const getManagerValidate = ajv.compile<GetManagerType>({

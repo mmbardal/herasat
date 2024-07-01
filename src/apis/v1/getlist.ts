@@ -5,6 +5,7 @@ import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
 import { checkPermission, validateToken } from "@/check";
 import type { getWriteAccess } from "@/schema/vahed";
+import { User } from "./login";
 
 export interface userInterface {
   id: number;
@@ -196,20 +197,78 @@ async function table(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
   }
 
   const token = jbody.token;
-  const id = jbody.id;
+  
+  const pageNum = jbody.offset-1;
   try {
     const user = await validateToken(token);
     if (user === null) {
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
-      `select *
-       from all_tables
-       where emp_id = ?`,
-      [id]
-    );
-    await reply.code(200).send({ tables: value });
+    const user_val = JSON.parse(user)as User
+    const role = user_val.role;
+    const id = user_val.id;
+    
+    console.log(role)
+    switch(role){
+      case "boss":
+        let [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
+          `select count(*) from all_tables`
+        );
+        console.log(allData)
+
+        let [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+          `select *
+           from all_tables  order by table_id desc limit 1 offset ?`,
+          [pageNum*1]
+        );
+        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]});
+        break;
+
+
+      case "deputy":
+        [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
+          `select count(*) from all_tables where deputy_id = ?`,[id]
+        );
+        [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+          `select *
+           from all_tables
+           where deputy_id = ?  order by table_id desc limit 100 offset ?`,
+          [id,pageNum*100]
+        );
+        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]}); 
+        break;
+
+
+      case "manager":
+        [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
+          `select count(*) from all_tables where manager_id = ?`,[id]
+        );
+        [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+          `select *
+            from all_tables
+            where manager_id = ? order by table_id desc limit 100 offset ?`,
+          [id, pageNum*100]
+        );
+        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]}); 
+        break;
+
+
+      case "expert":
+        [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
+          `select count(*) from all_tables where emp_id = ?`,[id]
+        );
+        [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+          `select *
+            from all_tables
+            where emp_id = ? order by table_id desc limit 100 offset ?`,
+          [id,pageNum*100]
+        );
+        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]}); 
+        break;
+
+    }
+    
     return;
   } catch (e:unknown) {
     logError(e);
