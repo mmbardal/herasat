@@ -46,7 +46,7 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       return;
     }
     const userVal = JSON.parse(user) as User;
-    if (await checkPermission(token, "GE")) {
+    if (!await checkPermission(token, "GE")) {
       await reply.code(403).send({ message: "forbidden" });
       return;
     }
@@ -289,10 +289,10 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     }
     const userVal = JSON.parse(user) as User;
     const role = userVal.role;
-    let table: unknown[] | string;
+    let [table] = await DB.conn.query<MySQLRowDataPacket[]>(`select 1;`) ;
     switch (role) {
       case "boss":
-        table = await DB.conn.query<MySQLRowDataPacket[]>(
+        [table] = await DB.conn.query<MySQLRowDataPacket[]>(
           `select approval_level
            from all_tables
            where boss_id = ?
@@ -301,7 +301,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         );
         break;
       case "deputy":
-        table = await DB.conn.query<MySQLRowDataPacket[]>(
+        [table] = await DB.conn.query<MySQLRowDataPacket[]>(
           `select approval_level
            from all_tables
            where deputy_id = ?
@@ -310,7 +310,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         );
         break;
       case "manager":
-        table = await DB.conn.query<MySQLRowDataPacket[]>(
+        [table] = await DB.conn.query<MySQLRowDataPacket[]>(
           `select approval_level
            from all_tables
            where manager_id = ?
@@ -319,7 +319,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
         );
         break;
       case "expert":
-        table = await DB.conn.query<MySQLRowDataPacket[]>(
+        [table] = await DB.conn.query<MySQLRowDataPacket[]>(
           `select approval_level
            from all_tables
            where emp_id = ?
@@ -332,10 +332,11 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     }
 
     if (table.length == 0) {
-      await reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden not found your table or your id" });
       return;
     }
-    const step = table[0];
+    const step = table[0].approval_level;
+    console.log(step as number);
     switch (role) {
       case "boss":
         if (step != 3) {
@@ -355,12 +356,14 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
              where table_id = ? `,
             [tableID]
           );
+         
           await DB.conn.query(
             `update all_tables
              set write_permission = 1
              where table_id = ?`,
             [tableID]
           );
+          
           await tableBuilder(name[0].table_name_FA as string);
         } else if (func == "disapprove") {
           await DB.conn.query(

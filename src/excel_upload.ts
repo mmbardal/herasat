@@ -1,21 +1,18 @@
 import { DB } from "./db";
-import * as ExcelJS from "exceljs";
-import * as fs from "fs-extra";
+import ExcelJS from "exceljs";
+import * as fs from "fs";
+import * as fsExtra from "fs-extra";
 import * as path from "path";
 import { FastifyPluginCallback, FastifyRequest } from "fastify";
 import fastifyMultipart from "@fastify/multipart";
+import { fileURLToPath } from 'url';
+
+// Equivalent to `__dirname` in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface RequestParams {
   tableID: string;
-}
-
-interface MultipartFile {
-  toBuffer: () => Promise<Buffer>;
-  file: NodeJS.ReadableStream;
-  fieldname: string;
-  filename: string;
-  encoding: string;
-  mimetype: string;
 }
 
 // Function to upload and insert data from Excel to MySQL
@@ -63,11 +60,11 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
     throw error;
   } finally {
     // Clean up the uploaded file
-    await fs.unlink(filePath);
+    await fsExtra.remove(filePath);
   }
 }
 
-const excelPluginUpload: FastifyPluginCallback = (fastify, options, done) => {
+const excelPluginUpload: FastifyPluginCallback = (fastify, _options, done) => {
   // Register the multipart plugin
   fastify.register(fastifyMultipart);
 
@@ -88,7 +85,9 @@ const excelPluginUpload: FastifyPluginCallback = (fastify, options, done) => {
         return;
       }
 
-      const filePath = path.join(__dirname, "uploads", data.filename);
+      const uploadDir = path.join(__dirname, "uploads");
+      await fsExtra.ensureDir(uploadDir); // Ensure the uploads directory exists
+      const filePath = path.join(uploadDir, data.filename);
 
       const fileWriteStream = fs.createWriteStream(filePath);
 
@@ -109,8 +108,8 @@ const excelPluginUpload: FastifyPluginCallback = (fastify, options, done) => {
         reply.status(500).send({ success: false, message: "Error uploading and inserting data", error });
       } finally {
         // Clean up the uploaded file
-        if (await fs.pathExists(filePath)) {
-          await fs.unlink(filePath);
+        if (await fsExtra.pathExists(filePath)) {
+          await fsExtra.remove(filePath);
         }
       }
     }
