@@ -32,7 +32,7 @@ export interface Vahed{
 }
 export interface SetWriteAccess {
   table: string;
-  token:number;
+  token:string;
   users:Vahed[];
 }
 

@@ -1,4 +1,4 @@
-import { ajv } from "../utils";
+import { ajv } from "@/utils";
 
 const loginValidate = ajv.compile<loginType>({
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -22,11 +22,14 @@ const registerValidate = ajv.compile<registerType>({
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": ["token", "username", "password"],
-  "additionalProperties": true,
+  "additionalProperties":false,
   "properties": {
     "token": { "type": "string" },
     "username": { "type": "string" },
-    "password": { "type": "string" }
+    "password": { "type": "string" },
+    "deputyName":{"type":"string"},
+    "managementName":{"type":"string"},
+    "expertName":{"type":"string"}
   }
 });
 
@@ -51,7 +54,7 @@ export enum Types {
 
 
 export function comboRegexGenerator(values: string[]): string {
-  let val: string = "";
+  let val = "";
   val += "^(?:";
 
   for (let i: number = 0; i < values.length; i++) {

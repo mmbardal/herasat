@@ -20,12 +20,13 @@ import { changeReadAccessFunc, checkPermission, validateToken } from "@/check";
 import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "@/constants";
 import { tableBuilder } from "../table_builder";
 import * as bcrypt from "bcrypt";
-import { SetWriteAccess, Vahed } from "@/schema/vahed";
+import type { SetWriteAccess, Vahed } from "@/schema/vahed";
+import type { User } from "@/apis/v1/login";
 
 async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: newTable;
   try {
-    jbody = JSON.parse(request.body as string) as newTable;
+    jbody = request.body as newTable;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -44,7 +45,7 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
     if (await checkPermission(token, "GE")) {
       await reply.code(403).send({ message: "forbidden" });
       return;
@@ -73,30 +74,30 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
     const deputyID = deputyIDRows[0].parent_id as number;
     const bossID = bossIDRows[0].parent_id as number;
     console.log(managerID);
-    for (let i = 0; i < jbody.fields.length; i++) {
-      if (jbody.fields[i].model == "comboBox") {
-        const combo = jbody.fields[i].comboBoxValues;
-        jbody.fields[i].regex = comboRegexGenerator(combo);
+    for (const item of jbody.fields) {
+      if (item.model == "comboBox") {
+        const combo = item.comboBoxValues;
+        item.regex = comboRegexGenerator(combo);
       }
-      if (jbody.fields[i].model == "phoneNumber") {
-        jbody.fields[i].regex = phoneNumberRegex;
+      if (item.model == "phoneNumber") {
+        item.regex = phoneNumberRegex;
       }
-      if (jbody.fields[i].model == "homeNumber") {
-        jbody.fields[i].regex = homeNumberRegex;
+      if (item.model == "homeNumber") {
+        item.regex = homeNumberRegex;
       }
-      if (jbody.fields[i].model == "nationalCode") {
-        jbody.fields[i].regex = nationalCodeRegex;
+      if (item.model == "nationalCode") {
+        item.regex = nationalCodeRegex;
       }
-      if (jbody.fields[i].model == "decimal") {
-        jbody.fields[i].regex = numbers;
+      if (item.model == "decimal") {
+        item.regex = numbers;
       }
-      if (jbody.fields[i].model == "anyThings") {
-        jbody.fields[i].regex = "";
+      if (item.model == "anyThings") {
+        item.regex = "";
       }
-      if (jbody.fields[i].model == "date") {
-        jbody.fields[i].regex = dateRegex;
+      if (item.model == "date") {
+        item.regex = dateRegex;
       }
-      console.log(jbody.fields[i]);
+      console.log(item);
     }
     const dataField: fields[] = jbody.fields;
     console.log(typeof expertID);
@@ -119,7 +120,7 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
 async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: editTable;
   try {
-    jbody = JSON.parse(request.body as string) as editTable;
+    jbody = request.body as editTable;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -138,7 +139,7 @@ async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
     if (await checkPermission(token, "GE")) {
       await reply.code(403).send({ message: "forbidden" });
       return;
@@ -229,7 +230,7 @@ async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
 async function rTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetType;
   try {
-    jbody = JSON.parse(request.body as string) as GetType;
+    jbody =request.body as GetType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -245,7 +246,7 @@ async function rTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
 
     const [tables] = await DB.conn.query<MySQLRowDataPacket[]>(
       `select *
@@ -269,7 +270,7 @@ async function rTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
 async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: ApproveType;
   try {
-    jbody = JSON.parse(request.body as string) as ApproveType;
+    jbody =request.body as ApproveType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -286,7 +287,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
     const role = userVal.role;
     let table: unknown[] | string;
     switch (role) {
@@ -356,8 +357,8 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
           );
           await DB.conn.query(
             `update all_tables
-                               set write_permission = 1
-                               where table_id = ?`,
+             set write_permission = 1
+             where table_id = ?`,
             [tableID]
           );
           await tableBuilder(name[0].table_name_FA as string);
@@ -445,7 +446,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
 async function search(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: searchType;
   try {
-    jbody = JSON.parse(request.body as string) as searchType;
+    jbody =request.body as searchType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -463,7 +464,7 @@ async function search(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    // const userVal = JSON.parse(user)as User;
     if (action == searchActionType.userSearch) {
       if (!(await checkPermission(token, "SU"))) {
         await reply.code(403).send({ message: "forbidden" });
@@ -504,7 +505,7 @@ async function changePermission(request: fastify.FastifyRequest, reply: fastify.
   perms.push("SU", "ST", "AU", "GE", "changeReadAccess");
   let jbody: changePermissionType;
   try {
-    jbody = JSON.parse(request.body as string) as changePermissionType;
+    jbody = request.body as changePermissionType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -522,7 +523,7 @@ async function changePermission(request: fastify.FastifyRequest, reply: fastify.
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    // const userVal = JSON.parse(user)as User;
 
     if (!(await checkPermission(token, "CP"))) {
       await reply.code(403).send({ message: "forbidden" });
@@ -567,7 +568,7 @@ async function changeReadWritePermission(request: fastify.FastifyRequest, reply:
   perms.push("read", "write", "both", "none");
   let jbody: changeReadWritePermissionType;
   try {
-    jbody = JSON.parse(request.body as string) as changeReadWritePermissionType;
+    jbody = request.body as changeReadWritePermissionType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -585,7 +586,7 @@ async function changeReadWritePermission(request: fastify.FastifyRequest, reply:
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    // const userVal = JSON.parse(user)as User;
 
     if (!(await checkPermission(token, "changeReadAccess"))) {
       await reply.code(403).send({ message: "forbidden" });
@@ -633,7 +634,7 @@ async function changeReadWritePermission(request: fastify.FastifyRequest, reply:
 async function changePassword(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: changePasswordType;
   try {
-    jbody = JSON.parse(request.body as string) as changePasswordType;
+    jbody = request.body as changePasswordType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -651,13 +652,14 @@ async function changePassword(request: fastify.FastifyRequest, reply: fastify.Fa
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
-    const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+    const userVal = JSON.parse(user) as User;
+    const [RawValue] = await DB.conn.query<MySQLRowDataPacket[]>(
       `select *
        from user
        where id = ?`,
       [userVal.id]
     );
+    const value = RawValue as User[];
     const auth: boolean = await bcrypt.compare(oldPass, value[0].password);
     if (auth) {
       await DB.conn.execute<MySQLRowDataPacket[]>(
@@ -683,7 +685,7 @@ async function changePassword(request: fastify.FastifyRequest, reply: fastify.Fa
 async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: SetWriteAccess;
   try {
-    jbody = JSON.parse(request.body as string) as SetWriteAccess;
+    jbody = request.body as SetWriteAccess;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -693,7 +695,7 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
 
   const token: string = jbody.token;
   const users: Vahed[] = jbody.users;
-  const tableId: number = jbody.table;
+  const tableId: string = jbody.table;
 
   try {
     const user = await validateToken(token);
@@ -701,7 +703,7 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
+    // const userVal = JSON.parse(user) as User;
     if (!(await checkPermission(token, "changeReadAccess"))) {
       await reply.code(403).send({ message: "forbidden" });
       return;
@@ -722,10 +724,10 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
   }
 }
 
-async function editWriteAccess(): Promise<void> {
+async function editWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: changePasswordType;
   try {
-    jbody = JSON.parse(request.body as string) as changePasswordType;
+    jbody = request.body as changePasswordType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
@@ -743,13 +745,14 @@ async function editWriteAccess(): Promise<void> {
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const userVal = JSON.parse(user);
-    const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+    const userVal = JSON.parse(user) as User;
+    const [RawValue] = await DB.conn.query<MySQLRowDataPacket[]>(
       `select *
        from user
        where id = ?`,
       [userVal.id]
     );
+    const value = RawValue as User[];
     const auth: boolean = await bcrypt.compare(oldPass, value[0].password);
     if (auth) {
       await DB.conn.execute<MySQLRowDataPacket[]>(
@@ -775,7 +778,7 @@ async function editWriteAccess(): Promise<void> {
 export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
   fastifier.post(`${prefix ?? ""}/newtable`, cTable);
   fastifier.post(`${prefix ?? ""}/updatetable`, uTable);
-  fastifier.post(`${prefix ?? ""}/gettable`, rTable);
+  fastifier.post(`${prefix ?? ""}/getDatatable`, rTable);
   fastifier.post(`${prefix ?? ""}/approvetable`, approve);
   fastifier.post(`${prefix ?? ""}/search`, search);
   fastifier.post(`${prefix ?? ""}/changePermission`, changePermission);

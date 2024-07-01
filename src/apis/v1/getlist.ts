@@ -67,7 +67,7 @@ async function getDeputy(request: fastify.FastifyRequest, reply: fastify.Fastify
 async function getManagement(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetManagerType;
   try {
-    jbody = JSON.parse(request.body as string) as GetManagerType;
+    jbody = request.body as GetManagerType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
@@ -104,7 +104,7 @@ async function getManagement(request: fastify.FastifyRequest, reply: fastify.Fas
 async function emp(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetEmpType;
   try {
-    jbody = JSON.parse(request.body as string) as GetEmpType;
+    jbody = request.body as GetEmpType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
@@ -139,7 +139,7 @@ async function emp(request: fastify.FastifyRequest, reply: fastify.FastifyReply)
 async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetUserType;
   try {
-    jbody = JSON.parse(request.body as string) as GetUserType;
+    jbody = request.body as GetUserType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
@@ -187,7 +187,7 @@ async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyRe
 async function table(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetTableType;
   try {
-    jbody = JSON.parse(request.body as string) as GetTableType;
+    jbody = request.body as GetTableType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
@@ -221,7 +221,7 @@ async function table(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
 async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetType;
   try {
-    jbody = JSON.parse(request.body as string) as GetType;
+    jbody = request.body as GetType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e:unknown) {
     await reply.code(400).send({ message: "badrequest" });
@@ -277,7 +277,7 @@ async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyRe
 async function vahedTablePermission(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: getWriteAccess;
   try {
-    jbody = JSON.parse(request.body as string) as getWriteAccess;
+    jbody = request.body as getWriteAccess;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e:unknown) {
     await reply.code(400).send({ message: "badrequest" });

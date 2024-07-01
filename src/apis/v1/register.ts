@@ -1,26 +1,30 @@
-import * as fastify from "fastify";
-import { registerType, schema } from "../../schema/panel";
+import type * as fastify from "fastify";
+import { registerType, schema } from "@/schema/panel";
+//import { schema } from "../../schema/panel";
 import * as bcrypt from "bcrypt";
-import { validate } from "../../utils";
+//import { validate } from "../../utils";
 
-import { DB } from "../../db";
+import { DB } from "@/db";
 
-import { MySQLRowDataPacket } from "@fastify/mysql";
+import type { MySQLRowDataPacket } from "@fastify/mysql";
 
-import { logError } from "../../logger";
-import { RedisDB } from "../../redis_db";
-import { checkPermission, validateToken } from "../../check";
+import { logError } from "@/logger";
+//import { RedisDB } from "../../redis_db";
+import { checkPermission, validateToken } from "@/check";
+import type { User } from "@/apis/v1/login";
+import { validate } from "@/utils";
 
 
 
-async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply):Promise<void> {
   let jbody: registerType;
   try {
-    jbody = JSON.parse(request.body as string) as registerType;
-    // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: any) {
-    reply.code(400).send({ message: "badrequestt" });
-    console.log(e.message);
+    console.log("hello");
+    jbody = request.body as registerType;
+    validate<registerType>(jbody,schema.registerValidate);
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequestt" });
+
     throw new Error();
   }
 
@@ -32,45 +36,49 @@ async function registerDeputy(request: fastify.FastifyRequest, reply: fastify.Fa
   try {
     const user = await validateToken(token)
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
     if (userVal.role != "boss") {
-      reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
     if (!(await checkPermission(token, "AU"))) {
-      reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
+    console.log("done");
     const [value] = await DB.conn.execute<MySQLRowDataPacket[]>("select deputy from user where deputy=?", [deputy]);
-    // console.log(1111);
-    // console.log(usernames);
+
+     console.log(value);
+
     if (value.length == 0) {
       const passwordDatabase = await bcrypt.hash(password, 12);
+
+
       await DB.conn.query(`insert into user (username, password, role, AU, parent_id, deputy)
-                           values (?, ?, "deputy", 1, ?, ?)`,[usernames,passwordDatabase,userVal.id,deputy]);
-      reply.code(201).send({ message: `${deputy} created` });
+                         values (?, ?, "deputy", 1, ?, ?)`,[usernames,passwordDatabase,userVal.id,deputy]);
+      console.log(1111);
+      await reply.code(201).send({ message: `${deputy} created` });
       return;
     }
-    reply.code(406).send({ message: "a deputy with this name is exist" });
+    await reply.code(406).send({ message: "a deputy with this name is exist" });
     return;
-  } catch (e: any) {
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
-    throw new Error();
+    await reply.code(500).send();
+
   }
 }
 
-async function registerManager(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function registerManager(request: fastify.FastifyRequest, reply: fastify.FastifyReply):Promise<void> {
   let jbody: registerType;
   try {
-    jbody = JSON.parse(request.body as string) as registerType;
+    jbody = request.body as registerType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
-    reply.code(400).send({ message: "badrequest" });
+    await reply.code(400).send({ message: "badrequest" });
     throw new Error();
   }
 
@@ -82,17 +90,17 @@ async function registerManager(request: fastify.FastifyRequest, reply: fastify.F
   try {
     const user =await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
     if (userVal.role != "deputy") {
-      reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
 
     if (!(await checkPermission(token, "AU"))) {
-      reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
 
@@ -108,26 +116,26 @@ async function registerManager(request: fastify.FastifyRequest, reply: fastify.F
                              values (?, ?, 'manager', 1, ?, ?,
                                      ?)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,management]);
 
-      reply.code(201).send({ message: `${management} created` });
+      await reply.code(201).send({ message: `${management} created` });
       return;
     }
-    reply.code(406).send({ message: "a management with this name in this deputy is exist" });
+    await reply.code(406).send({ message: "a management with this name in this deputy is exist" });
     return;
-  } catch (e: any) {
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
+    await reply.code(500).send();
 
     throw new Error();
   }
 }
 
-async function registerExpert(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
+async function registerExpert(request: fastify.FastifyRequest, reply: fastify.FastifyReply):Promise<void> {
   let jbody: registerType;
   try {
-    jbody = JSON.parse(request.body as string) as registerType;
+    jbody = request.body as registerType;
     // validate<loginType>(jbody,schema.loginValidate);
   } catch (e: unknown) {
-    reply.code(400).send({ message: "badrequest" });
+    await reply.code(400).send({ message: "badrequest" });
     throw new Error();
   }
 
@@ -139,17 +147,17 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
   try {
     const user = await validateToken(token);
     if (user === null) {
-      reply.code(401).send({ message: "not authenticated" });
+      await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    let userVal = JSON.parse(user);
+    const userVal = JSON.parse(user) as User;
     if (userVal.role != "manager") {
-      reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
 
     if (!(await checkPermission(token, "AU"))) {
-      reply.code(403).send({ message: "forbidden" });
+      await reply.code(403).send({ message: "forbidden" });
       return;
     }
 
@@ -165,15 +173,15 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
                              values (?, ?, 'expert', 0, ?, ?,
                                      ?,?,1)`,[usernames,passwordDatabase,userVal.id,userVal.deputy,userVal.management,expert]);
 
-      reply.code(201).send({ message: `${expert} created` });
+      await reply.code(201).send({ message: `${expert} created` });
       return;
     }
-    reply.code(406).send({ message: "a expert with this name in this management is exist" });
+    await reply.code(406).send({ message: "a expert with this name in this management is exist" });
     return;
-  } catch (e: any) {
+  } catch (e: unknown) {
     logError(e);
-    reply.code(500);
-    console.log(e.message);
+    await reply.code(500).send();
+
     throw new Error();
   }
 }
