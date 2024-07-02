@@ -25,15 +25,19 @@ export async function tableBuilder(tableName: string): Promise<void> {
 
 }
 
-export interface Column {
+export interface AddColumns {
   token: string;
   tableID: string;
+  columns: Column[]
+}
+
+export interface Column {
   name: string;
   type: string;
   constraints?: string;
 }
 
-export async function addColumnsToTable(tableName: string, columns: Column[]): Promise<void> {
+export async function addColumnsToTable(tableID: string, tableName: string, columns: Column[]): Promise<void> {
   let queryField = "";
   
   columns.forEach((column, index) => {
@@ -48,6 +52,12 @@ export async function addColumnsToTable(tableName: string, columns: Column[]): P
 
   const query = `ALTER TABLE ${tableName} ${queryField};`;
   await DB.conn.query<MySQLRowDataPacket[]>(query);
+  await DB.conn.query(
+    `update all_tables
+     set approval_level = 0
+     where table_id = ?`,
+    [tableID]
+  );
 }
 
 // Usage example
