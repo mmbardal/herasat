@@ -10,6 +10,7 @@ import { RegisterAPI } from "@/apis/v1/register";
 import excelPluginDownload from "@/excel_download";
 import excelPluginUpload from "@/excel_upload";
 import { GetListAPI } from "@/apis/v1/getlist";
+import { GetListBranchAPI } from "@/apis/v1/vahed";
 
 const fastifier = fastify();
 
@@ -18,6 +19,7 @@ try {
 } catch (e: unknown) {
   //logError(e);
   console.log("DB Error1");
+
   process.exit(1);
 }
 
@@ -39,6 +41,7 @@ LoginAPI(fastifier, "/v1");
 PanelAPI(fastifier, "/v1");
 RegisterAPI(fastifier, "/v1");
 GetListAPI(fastifier, "/v1");
+GetListBranchAPI(fastifier, "/v1");
 
 await fastifier.register(excelPluginUpload);
 await fastifier.register(excelPluginDownload);

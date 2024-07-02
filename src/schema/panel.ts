@@ -243,6 +243,7 @@ export interface GetTableType {
   
 }
 
+
 const getManagerValidate = ajv.compile<GetManagerType>({
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
