@@ -39,22 +39,50 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
       throw new Error("No data to insert");
     }
 
-    // Insert rows into the database
-    const columns = rows[0].map((_, index) => `column${index + 1}`).join(", ");
-    const placeholders = rows[0].map(() => "?").join(", ");
+    // Determine column names
+    const columns = rows[0].map((_, index) => `col_${index}`).join(", ");
 
-    const insertQuery = `INSERT INTO t_${tableID} (${columns})
-                         VALUES (${placeholders})`;
-    const connection = await DB.conn.getConnection();
-    try {
-      for (const row of rows) {
-        await connection.execute(insertQuery, row);
+    // Define maximum statement size (in bytes)
+    const maxStatementSize = 1024 * 1024; // 1024 KB
+
+    // Insert rows into the database using extended insert statements
+    let insertQuery = `INSERT INTO table_${tableID} (${columns}) VALUES `;
+    let currentSize = insertQuery.length;
+    const queries: string[] = [];
+    const queryParams: any[] = [];
+    let valuesPart = "";
+
+    rows.forEach((row, rowIndex) => {
+      const rowPlaceholder = `(${row.map(() => "?").join(", ")})`;
+      valuesPart += rowPlaceholder + ", ";
+      row.forEach((value) => queryParams.push(value));
+
+      currentSize += rowPlaceholder.length;
+
+      // If current size exceeds max statement size or it's the last row, create a new query
+      if (currentSize > maxStatementSize || rowIndex === rows.length - 1) {
+        valuesPart = valuesPart.slice(0, -2); // Remove trailing comma and space
+        queries.push(insertQuery + valuesPart);
+        valuesPart = "";
+        currentSize = insertQuery.length;
       }
+    });
+
+    const connection = await DB.conn.getConnection();
+    await connection.beginTransaction();  //conn.escape() for cleaning
+    try {
+      for (const query of queries) {
+        await connection.execute(query, queryParams.splice(0, (query.match(/\?/g) || []).length));
+      }
+      await connection.commit();
+      console.log("Data inserted successfully!");
+    } catch (error) {
+      await connection.rollback();
+      console.error("Error during insertion, transaction rolled back:", error);
+      throw error;
     } finally {
       connection.release();
     }
-
-    console.log("Data inserted successfully!");
   } catch (error) {
     console.error("Error uploading and inserting data:", error);
     throw error;
@@ -63,6 +91,8 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
     await fsExtra.remove(filePath);
   }
 }
+
+
 
 const excelPluginUpload: FastifyPluginCallback = (fastify, _options, done) => {
   // Register the multipart plugin
@@ -84,7 +114,7 @@ const excelPluginUpload: FastifyPluginCallback = (fastify, _options, done) => {
         reply.status(400).send({ success: false, message: "No file uploaded" });
         return;
       }
-
+       
       const uploadDir = path.join(__dirname, "uploads");
       await fsExtra.ensureDir(uploadDir); // Ensure the uploads directory exists
       const filePath = path.join(uploadDir, data.filename);

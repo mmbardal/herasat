@@ -356,7 +356,19 @@ export interface changePasswordType {
   token: string;
   oldPass:string;
   newPass:string;
+}
 
+export interface TableIdentification {
+  token: string;
+  tableID:string;
+}
+
+export interface ColumnProperties {
+  name: string;
+  model: string;
+  regex: string;
+  nullable: boolean;
+  comboBoxValues: string[];
 }
 
 export const schema = {

@@ -11,11 +11,18 @@ export async function tableBuilder(tableName: string): Promise<void> {
   let queryField:string = ""
   console.log(name);
   for (let i =0;i<columns;i++){
-    if(i == columns-1){
-      queryField += `col_${i} varchar(255)`
+    let type = value[0]["columns_properties"][0].model;
+    if (type == "phoneNumber" || type == "homeNumber" || type == "nationalCode" || type == "decimal"){
+      type = "BIGINT";
     }
     else{
-      queryField += `col_${i} varchar(255),`
+      type = "varchar(255)"
+    }
+    if(i == columns-1){
+      queryField += `col_${i} ${type}`
+    }
+    else{
+      queryField += `col_${i} ${type},`
     }
     console.log(i);
   }
