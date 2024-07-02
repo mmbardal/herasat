@@ -11,7 +11,6 @@ import excelPluginDownload from "@/excel_download";
 import excelPluginUpload from "@/excel_upload";
 import { GetListAPI } from "@/apis/v1/getlist";
 
-
 const fastifier = fastify();
 
 try {
@@ -24,7 +23,7 @@ try {
 
 try {
   DB.init(10);
-   await DB.conn.query("SELECT 1;");
+  await DB.conn.query("SELECT 1;");
 } catch (e) {
   console.log("DB Error");
   console.log(`Connection: ${mysqlHost}:3306`);
@@ -36,17 +35,13 @@ try {
   process.exit(1);
 }
 
-
 LoginAPI(fastifier, "/v1");
 PanelAPI(fastifier, "/v1");
 RegisterAPI(fastifier, "/v1");
 GetListAPI(fastifier, "/v1");
 
-
-  
-  fastifier.register(excelPluginUpload)
-  fastifier.register(excelPluginDownload);
-
+await fastifier.register(excelPluginUpload);
+await fastifier.register(excelPluginDownload);
 
 await fastifier.listen({ port: 3000 });
 

@@ -5,7 +5,7 @@ import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
 import { checkPermission, validateToken } from "@/check";
 import type { getWriteAccess } from "@/schema/vahed";
-import { User } from "./login";
+import type { User } from "./login";
 
 export interface userInterface {
   id: number;
@@ -159,17 +159,17 @@ async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     if (await checkPermission(token, "CP")) {
       const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
         `select id,
-                                                                          username,
-                                                                          role,
-                                                                          parent_id,
-                                                                          SU,
-                                                                          ST,
-                                                                          CP,
-                                                                          AU,
-                                                                          changeReadAccess,
-                                                                          GE
-                                                                   from user
-                                                                   where username = ?`,
+                username,
+                role,
+                parent_id,
+                SU,
+                ST,
+                CP,
+                AU,
+                changeReadAccess,
+                GE
+         from user
+         where username = ?`,
         [username]
       );
       await reply.code(200).send({ user: value[0] });
@@ -197,80 +197,93 @@ async function table(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
   }
 
   const token = jbody.token;
-  
-  const pageNum = jbody.offset-1;
+
+  const pageNum = jbody.offset - 1;
   try {
     const user = await validateToken(token);
     if (user === null) {
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
-    const user_val = JSON.parse(user)as User
+    const user_val = JSON.parse(user) as User;
     const role = user_val.role;
     const id = user_val.id;
-    
-    console.log(role)
-    switch(role){
-      case "boss":
-        let [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
-          `select count(*) from all_tables`
-        );
-        console.log(allData)
 
-        let [value] = await DB.conn.query<MySQLRowDataPacket[]>(
-          `select *
-           from all_tables  order by table_id desc limit 1 offset ?`,
-          [pageNum*1]
-        );
-        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]});
-        break;
+    console.log(role);
+    if (role === "boss") {
+      const [allData] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select count(*)
+         from all_tables`
+      );
+      console.log(allData);
 
-
-      case "deputy":
-        [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
-          `select count(*) from all_tables where deputy_id = ?`,[id]
-        );
-        [value] = await DB.conn.query<MySQLRowDataPacket[]>(
-          `select *
-           from all_tables
-           where deputy_id = ?  order by table_id desc limit 100 offset ?`,
-          [id,pageNum*100]
-        );
-        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]}); 
-        break;
-
-
-      case "manager":
-        [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
-          `select count(*) from all_tables where manager_id = ?`,[id]
-        );
-        [value] = await DB.conn.query<MySQLRowDataPacket[]>(
-          `select *
-            from all_tables
-            where manager_id = ? order by table_id desc limit 100 offset ?`,
-          [id, pageNum*100]
-        );
-        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]}); 
-        break;
-
-
-      case "expert":
-        [allData] =  await DB.conn.query<MySQLRowDataPacket[]>(
-          `select count(*) from all_tables where emp_id = ?`,[id]
-        );
-        [value] = await DB.conn.query<MySQLRowDataPacket[]>(
-          `select *
-            from all_tables
-            where emp_id = ? order by table_id desc limit 100 offset ?`,
-          [id,pageNum*100]
-        );
-        await reply.code(200).send({ tables: value ,"number of all data":allData[0]["count(*)"]}); 
-        break;
-
+      const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select *
+         from all_tables
+         order by table_id desc
+         limit 100 offset ?`,
+        [pageNum * 100]
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      await reply.code(200).send({ tables: value, "number of all data": allData[0]["count(*)"] });
+    } else if (role === "deputy") {
+      const [allData] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select count(*)
+         from all_tables
+         where deputy_id = ?`,
+        [id]
+      );
+      const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select *
+         from all_tables
+         where deputy_id = ?
+         order by table_id desc
+         limit 100 offset ?`,
+        [id, pageNum * 100]
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      await reply.code(200).send({ tables: value, "number of all data": allData[0]["count(*)"] });
+    } else if (role === "manager") {
+      const [allData] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select count(*)
+         from all_tables
+         where manager_id = ?`,
+        [id]
+      );
+      const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select *
+         from all_tables
+         where manager_id = ?
+         order by table_id desc
+         limit 100 offset ?`,
+        [id, pageNum * 100]
+      );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      await reply.code(200).send({ tables: value, "number of all data": allData[0]["count(*)"] });
+    } else if (role === "expert") {
+      const [allData] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select count(*)
+         from all_tables
+         where emp_id = ?`,
+        [id]
+      );
+      const [value] = await DB.conn.query<MySQLRowDataPacket[]>(
+        `select *
+         from all_tables
+         where emp_id = ?
+         order by table_id desc
+         limit 100 offset ?`,
+        [id, pageNum * 100]
+      );
+      await reply.code(200).send({
+        "tables": value,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        "number of all data": allData[0]["count(*)"]
+      });
     }
-    
+
     return;
-  } catch (e:unknown) {
+  } catch (e: unknown) {
     logError(e);
     await reply.code(500);
     throw new Error();
@@ -282,7 +295,7 @@ async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyRe
   try {
     jbody = request.body as GetType;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e:unknown) {
+  } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
     throw new Error();
@@ -326,7 +339,7 @@ async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     }
     await reply.code(200).send({ provinces: listProv });
     return;
-  } catch (e:unknown) {
+  } catch (e: unknown) {
     logError(e);
     await reply.code(500);
     throw new Error();
@@ -338,9 +351,9 @@ async function vahedTablePermission(request: fastify.FastifyRequest, reply: fast
   try {
     jbody = request.body as getWriteAccess;
     // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e:unknown) {
+  } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
-   logError(e);
+    logError(e);
     throw new Error();
   }
 
@@ -366,7 +379,7 @@ async function vahedTablePermission(request: fastify.FastifyRequest, reply: fast
       [tableId]
     );
     await reply.code(200).send({ users: value });
-  } catch (e:unknown) {
+  } catch (e: unknown) {
     logError(e);
     await reply.code(500);
     throw new Error();
