@@ -37,7 +37,7 @@ export interface Column {
   constraints?: string;
 }
 
-export async function addColumnsToTable(tableName: string, columns: Column[]): Promise<void> {
+export async function addColumnsToTable(tableID: string, tableName: string, columns: Column[]): Promise<void> {
   let queryField = "";
   
   columns.forEach((column, index) => {
@@ -52,6 +52,12 @@ export async function addColumnsToTable(tableName: string, columns: Column[]): P
 
   const query = `ALTER TABLE ${tableName} ${queryField};`;
   await DB.conn.query<MySQLRowDataPacket[]>(query);
+  await DB.conn.query(
+    `update all_tables
+     set approval_level = 0
+     where table_id = ?`,
+    [tableID]
+  );
 }
 
 // Usage example

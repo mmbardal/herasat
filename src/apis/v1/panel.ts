@@ -474,7 +474,7 @@ async function reusetable(request: fastify.FastifyRequest, reply: fastify.Fastif
     }
 
     const tableName = "table_"+jbody.tableID;
-    await addColumnsToTable(tableName, jbody.columns);
+    await addColumnsToTable(jbody.tableID, tableName, jbody.columns);
     await reply.code(200).send({ message: "new columns added to table" });
     return;
 
