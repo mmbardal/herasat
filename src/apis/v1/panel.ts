@@ -872,5 +872,56 @@ export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): v
   fastifier.post(`${prefix ?? ""}/changeReadWritePermission`, changeReadWritePermission);
   fastifier.post(`${prefix ?? ""}/changepassword`, changePassword);
   fastifier.post(`${prefix ?? ""}/setwriteaccess`, setWriteAccess);
-  fastifier.post(`${prefix ?? ""}/editwriteaccess`, editWriteAccess);
+  //fastifier.post(`${prefix ?? ""}/editwriteaccess`, editWriteAccess);
 }
+
+// async function editWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+//   let jbody: changePasswordType;
+//   try {
+//     jbody = request.body as changePasswordType;
+//     // validate<loginType>(jbody,schema.loginValidate);
+//   } catch (e: unknown) {
+//     await reply.code(400).send({ message: "badrequestt" });
+//
+//     throw new Error();
+//   }
+//
+//   const token = jbody.token;
+//   const oldPass: string = jbody.oldPass;
+//   const newPass: string = jbody.newPass;
+//
+//   try {
+//     const user = await validateToken(token);
+//     if (user === null) {
+//       await reply.code(401).send({ message: "not authenticated" });
+//       return;
+//     }
+//     const userVal = JSON.parse(user) as User;
+//     const [RawValue] = await DB.conn.query<MySQLRowDataPacket[]>(
+//       `select *
+//        from user
+//        where id = ?`,
+//       [userVal.id]
+//     );
+//     const value = RawValue as User[];
+//     const auth: boolean = await bcrypt.compare(oldPass, value[0].password);
+//     if (auth) {
+//       await DB.conn.execute<MySQLRowDataPacket[]>(
+//         `update user
+//          SET password = ?
+//          where id = ?`,
+//         [await bcrypt.hash(newPass, 12), userVal.id]
+//       );
+//       await reply.code(200).send({ message: "updated" });
+//       return;
+//     } else {
+//       await reply.code(403).send({ message: "old password is wrong" });
+//       return;
+//     }
+//   } catch (e: unknown) {
+//     logError(e);
+//     await reply.code(500);
+//
+//     throw new Error();
+//   }
+// }
