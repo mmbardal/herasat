@@ -25,9 +25,13 @@ export async function tableBuilder(tableName: string): Promise<void> {
 
 }
 
-export interface Column {
+export interface AddColumns {
   token: string;
   tableID: string;
+  columns: Column[]
+}
+
+export interface Column {
   name: string;
   type: string;
   constraints?: string;
