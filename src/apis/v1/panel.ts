@@ -18,7 +18,7 @@ import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
 import { changeReadAccessFunc, checkPermission, validateToken } from "@/check";
 import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "@/constants";
-import { tableBuilder } from "../table_builder";
+import { tableBuilder, addColumnsToTable, Column } from "../table_builder";
 import * as bcrypt from "bcrypt";
 import type { SetWriteAccess, Vahed } from "@/schema/vahed";
 import type { User } from "@/apis/v1/login";
@@ -444,6 +444,35 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
   }
 }
 
+async function reusetable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  let jbody: Column[];
+  try {
+    jbody = request.body as Column[];
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequestt" });
+    throw new Error();
+  }
+
+  const token = jbody[0].token;
+
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+
+    const tableName = "table_"+jbody[0].tableID;
+    await addColumnsToTable(tableName, jbody);
+    await reply.code(200).send({ message: "new columns added to table" });
+    return;
+
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+  }
+}
+
 //async function showTablePagination(request: fastify.FastifyRequest, reply: fastify.FastifyReply):Promise<void> {}
 
 async function search(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
@@ -782,6 +811,7 @@ export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): v
   fastifier.post(`${prefix ?? ""}/newtable`, cTable);
   fastifier.post(`${prefix ?? ""}/updatetable`, uTable);
   fastifier.post(`${prefix ?? ""}/getDatatable`, rTable);
+  fastifier.post(`${prefix ?? ""}/addColumn`, reusetable);
   fastifier.post(`${prefix ?? ""}/approvetable`, approve);
   fastifier.post(`${prefix ?? ""}/search`, search);
   fastifier.post(`${prefix ?? ""}/changePermission`, changePermission);

@@ -23,3 +23,38 @@ export async function tableBuilder(tableName: string): Promise<void> {
   await DB.conn.query<MySQLRowDataPacket[]>(`create table ${name}(${queryField});`)
 
 }
+
+export interface Column {
+  token: string;
+  tableID: string;
+  name: string;
+  type: string;
+  constraints?: string;
+}
+
+export async function addColumnsToTable(tableName: string, columns: Column[]): Promise<void> {
+  let queryField = "";
+  
+  columns.forEach((column, index) => {
+    queryField += `ADD COLUMN ${column.name} ${column.type}`;
+    if (column.constraints) {
+      queryField += ` ${column.constraints}`;
+    }
+    if (index < columns.length - 1) {
+      queryField += ", ";
+    }
+  });
+
+  const query = `ALTER TABLE ${tableName} ${queryField};`;
+  await DB.conn.query<MySQLRowDataPacket[]>(query);
+}
+
+// Usage example
+/*
+(async () => {
+  await addColumnsToTable('employees', [
+    { name: 'email', type: 'VARCHAR(255)', constraints: 'UNIQUE' },
+    { name: 'hire_date', type: 'DATE', constraints: 'DEFAULT CURRENT_DATE' },
+  ]);
+})();
+*/
