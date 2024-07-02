@@ -99,7 +99,15 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       }
       console.log(item);
     }
+
+
     const dataField: fields[] = jbody.fields;
+    dataField.push(
+      {"name": "Branch", "model": "anyThings", "regex": "", "nullable": false, "comboBoxValues": []},
+      {"name": "Province", "model": "anyThings", "regex": "", "nullable": false, "comboBoxValues": []},
+      {"name": "approvedByProvince", "model": "anyThings", "regex": "", "nullable": false, "comboBoxValues": []}
+    )
+
     console.log(typeof expertID);
     await DB.conn.query(
       `insert into all_tables (table_name_FA, change_lock, emp_id, manager_id, deputy_id, boss_id, approval_level,

@@ -24,8 +24,9 @@ export async function exportTableToExcel(tableID: string): Promise<Buffer> {
     }
 
     const columnsProperties: ColumnProperties[] = jsonRows[0].columns_properties;
-    // Extract column names from JSON objects
-    const headerNames: string[] = columnsProperties.map((item: ColumnProperties) => item.name);
+    // Extract column names from JSON objects, excluding the last three
+    const headerNames: string[] = columnsProperties.slice(0, -3).map((item: ColumnProperties) => item.name);
+
 
     // Create a new workbook
     const workbook = new ExcelJS.Workbook();
@@ -39,12 +40,18 @@ export async function exportTableToExcel(tableID: string): Promise<Buffer> {
 
     // Add rows
     for (const row of rows) {
-      const rowData: any[] = [];
-      for (const key in row) {
-        rowData.push(row[key]);
+        const rowData: any[] = [];
+        const keys = Object.keys(row);
+        const keysToInclude = keys.slice(0, -3); // Exclude the last three keys
+      
+        for (const key of keysToInclude) {
+          rowData.push(row[key]);
+        }
+        
+        console.log(rowData); // To verify the rowData contents
+        worksheet.addRow(rowData); // Add the rowData to the worksheet
       }
-      worksheet.addRow(rowData);
-    }
+      
 
     // Write to buffer
     const buffer: Buffer = await workbook.xlsx.writeBuffer() as Buffer;
