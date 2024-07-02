@@ -8,7 +8,7 @@ export async function validateToken(token: string): Promise<string | null> {
     return await RedisDB.conn().get(token);
   } catch (e: unknown) {
     logError(e as Error);
-    console.log(e.message);
+    //console.log(e.message);
     throw new Error();
   }
 }

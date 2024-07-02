@@ -99,7 +99,15 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
       }
       console.log(item);
     }
+
+
     const dataField: fields[] = jbody.fields;
+    dataField.push(
+      {"name": "Branch", "model": "anyThings", "regex": "", "nullable": false, "comboBoxValues": []},
+      {"name": "Province", "model": "anyThings", "regex": "", "nullable": false, "comboBoxValues": []},
+      {"name": "approvedByProvince", "model": "anyThings", "regex": "", "nullable": false, "comboBoxValues": []}
+    )
+
     console.log(typeof expertID);
     await DB.conn.query(
       `insert into all_tables (table_name_FA, change_lock, emp_id, manager_id, deputy_id, boss_id, approval_level,
@@ -266,7 +274,9 @@ async function rTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
     throw new Error();
   }
 }
-
+interface step{
+  approval_level:number;
+}
 async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: ApproveType;
   try {
@@ -335,8 +345,9 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
       await reply.code(403).send({ message: "forbidden not found your table or your id" });
       return;
     }
-    const step = table[0].approval_level;
-    console.log(step as number);
+    const stepx = table[0] as step;
+    const step = stepx.approval_level;
+
     switch (role) {
       case "boss":
         if (step != 3) {

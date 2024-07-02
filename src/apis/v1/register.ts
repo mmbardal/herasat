@@ -1,5 +1,6 @@
 import type * as fastify from "fastify";
-import { registerType, schema } from "@/schema/panel";
+import type { registerType} from "@/schema/panel";
+import { schema } from "@/schema/panel";
 //import { schema } from "../../schema/panel";
 import * as bcrypt from "bcrypt";
 //import { validate } from "../../utils";

@@ -10,8 +10,8 @@ export async function tableBuilder(tableName: string): Promise<void> {
   console.log(name);
   let queryField:string = ""
   console.log(name);
-  for (let i =0;i<columns+3;i++){
-    if(i == columns+2){
+  for (let i =0;i<columns;i++){
+    if(i == columns-1){
       queryField += `col_${i} varchar(255)`
     }
     else{
@@ -19,6 +19,7 @@ export async function tableBuilder(tableName: string): Promise<void> {
     }
     console.log(i);
   }
+  
   console.log(queryField);
   await DB.conn.query<MySQLRowDataPacket[]>(`create table ${name}(${queryField});`)
 
