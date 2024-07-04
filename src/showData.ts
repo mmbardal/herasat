@@ -1,6 +1,5 @@
 import { FastifyReply } from "fastify";
 import { DB } from "./db";
-import { ColumnProperties } from "./schema/panel";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { filter } from "./schema/panel";
 

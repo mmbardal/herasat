@@ -6,6 +6,7 @@ import type {
   changeReadWritePermissionType,
   editTable,
   fields,
+  filter,
   GetType,
   newTable,
   searchType,
@@ -23,7 +24,7 @@ import { tableBuilder, addColumnsToTable, AddColumns } from "../table_builder";
 import * as bcrypt from "bcrypt";
 import type { SetWriteAccess, Vahed } from "@/schema/vahed";
 import type { User } from "@/apis/v1/login";
-import { generateTableJsonOutput } from "@/showData";
+import { tableDataOutput, columnNamesOutput } from "@/showData";
 
 async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: newTable;
@@ -769,58 +770,7 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
   }
 }
 
-async function editWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  let jbody: changePasswordType;
-  try {
-    jbody = request.body as changePasswordType;
-    // validate<loginType>(jbody,schema.loginValidate);
-  } catch (e: unknown) {
-    await reply.code(400).send({ message: "badrequestt" });
-
-    throw new Error();
-  }
-
-  const token = jbody.token;
-  const oldPass: string = jbody.oldPass;
-  const newPass: string = jbody.newPass;
-
-  try {
-    const user = await validateToken(token);
-    if (user === null) {
-      await reply.code(401).send({ message: "not authenticated" });
-      return;
-    }
-    const userVal = JSON.parse(user) as User;
-    const [RawValue] = await DB.conn.query<MySQLRowDataPacket[]>(
-      `select *
-       from user
-       where id = ?`,
-      [userVal.id]
-    );
-    const value = RawValue as User[];
-    const auth: boolean = await bcrypt.compare(oldPass, value[0].password);
-    if (auth) {
-      await DB.conn.execute<MySQLRowDataPacket[]>(
-        `update user
-         SET password = ?
-         where id = ?`,
-        [await bcrypt.hash(newPass, 12), userVal.id]
-      );
-      await reply.code(200).send({ message: "updated" });
-      return;
-    } else {
-      await reply.code(403).send({ message: "old password is wrong" });
-      return;
-    }
-  } catch (e: unknown) {
-    logError(e);
-    await reply.code(500);
-
-    throw new Error();
-  }
-}
-
-async function showData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+async function retrieveTableColumns(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: TableIdentification;
   try {
     jbody = request.body as TableIdentification;
@@ -846,7 +796,7 @@ async function showData(request: fastify.FastifyRequest, reply: fastify.FastifyR
       return;
     }
     
-    await generateTableJsonOutput(tableID, reply)
+    await columnNamesOutput(tableID, reply)
 
     return;
 
@@ -858,6 +808,43 @@ async function showData(request: fastify.FastifyRequest, reply: fastify.FastifyR
   }
 }
 
+async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  let jbody: TableIdentification;
+  try {
+    jbody = request.body as TableIdentification;
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequestt" });
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const tableID: string = jbody.tableID;
+
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    const user_val = JSON.parse(user) as User;
+    if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+
+    // Extract filters
+    const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
+
+    // Pass filters to the tableDataOutput function if needed
+    await tableDataOutput(tableID, reply, filters);
+
+    return;
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
+}
 
 
 export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
@@ -865,7 +852,8 @@ export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): v
   fastifier.post(`${prefix ?? ""}/updatetable`, uTable);
   fastifier.post(`${prefix ?? ""}/getDatatable`, rTable);
   fastifier.post(`${prefix ?? ""}/addColumn`, reusetable);
-  fastifier.post(`${prefix ?? ""}/showData`, showData);
+  fastifier.post(`${prefix ?? ""}/retrieveTableData`, retrieveTableData);
+  fastifier.post(`${prefix ?? ""}/retrieveTableColumns`, retrieveTableColumns);
   fastifier.post(`${prefix ?? ""}/approvetable`, approve);
   fastifier.post(`${prefix ?? ""}/search`, search);
   fastifier.post(`${prefix ?? ""}/changePermission`, changePermission);

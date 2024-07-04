@@ -361,7 +361,8 @@ export interface changePasswordType {
 
 export interface TableIdentification {
   token: string;
-  tableID:string;
+  tableID: string;
+  filters?: [string, string][];
 }
 
 export interface ColumnProperties {
