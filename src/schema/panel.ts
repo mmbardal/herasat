@@ -359,6 +359,11 @@ export interface changePasswordType {
 
 }
 
+export interface filter{
+  columnName: string,
+  contain: string
+}
+
 export const schema = {
   loginValidate,
   registerValidate,
