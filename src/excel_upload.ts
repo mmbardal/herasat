@@ -3,9 +3,11 @@ import ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as fsExtra from "fs-extra";
 import * as path from "path";
-import { FastifyPluginCallback, FastifyRequest } from "fastify";
+import { FastifyPluginCallback, FastifyRequest, fastify } from "fastify";
 import fastifyMultipart from "@fastify/multipart";
 import { fileURLToPath } from 'url';
+import type { MySQLRowDataPacket } from "@fastify/mysql";
+
 
 // Equivalent to `__dirname` in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -16,8 +18,21 @@ interface RequestParams {
 }
 
 // Function to upload and insert data from Excel to MySQL
-async function uploadExcelToDatabase(filePath: string, tableID: string) {
+async function uploadExcelToDatabase(filePath: string, tableID: string, reply: fastify.FastifyReply) {
   try {
+    const vahedName = "vahed";      //todo: fix vahedName
+    const provinceName = "ostan";      //todo: fix provinceName
+
+    // Check if there are any rows where the approve column is 1
+    const checkQuery = `SELECT COUNT(*) as count FROM tableName WHERE approve <> 2 AND approve <> 3 AND approve <> 4 AND approve <> 5 AND approve <> 6`; // Replace 'tableName' with the actual table name
+    const [checkResult] = await DB.conn.execute<MySQLRowDataPacket[]>(checkQuery);
+    
+    // If no rows are found, send a 404 forbidden reply and rollback the transaction
+    if (checkResult[0].count === 0) {
+      reply.status(404).send({ success: false, message: "No rows found with approve = 1" });
+      return;
+    }
+
     // Load the workbook
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(filePath);
@@ -39,8 +54,11 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
       throw new Error("No data to insert");
     }
 
-    // Determine column names
-    const columns = rows[0].map((_, index) => `col_${index}`).join(", ");
+    // Add placeholders for the three additional values
+    const additionalValues = [vahedName, provinceName, '1']; // Replace with actual values
+
+    // Determine column names (n+3 columns)
+    const columns = rows[0].map((_, index) => `col_${index}`).join(", ") + `, col_${rows[0].length}, col_${rows[0].length + 1}, col_${rows[0].length + 2}`;
 
     // Define maximum statement size (in bytes)
     const maxStatementSize = 1024 * 1024; // 1024 KB
@@ -53,9 +71,15 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
     let valuesPart = "";
 
     rows.forEach((row, rowIndex) => {
-      const rowPlaceholder = `(${row.map(() => "?").join(", ")})`;
+      // Add the additional values to each row
+      const fullRow = row.concat(additionalValues);
+
+      // Cleanse the row values to prevent SQL injection
+      const cleanedRow = fullRow.map(value => DB.conn.escape(value));
+
+      const rowPlaceholder = `(${cleanedRow.map(() => "?").join(", ")})`;
       valuesPart += rowPlaceholder + ", ";
-      row.forEach((value) => queryParams.push(value));
+      cleanedRow.forEach((value) => queryParams.push(value));
 
       currentSize += rowPlaceholder.length;
 
@@ -69,8 +93,12 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
     });
 
     const connection = await DB.conn.getConnection();
-    await connection.beginTransaction();  //conn.escape() for cleaning
+    await connection.beginTransaction();
     try {
+      // Delete rows where the value of the approve column is 1
+      const deleteQuery = `DELETE FROM ${"table_"+tableID} WHERE approve = 1 AND vahed = ${vahedName}`;
+      await connection.execute(deleteQuery);
+
       for (const query of queries) {
         await connection.execute(query, queryParams.splice(0, (query.match(/\?/g) || []).length));
       }
@@ -83,14 +111,16 @@ async function uploadExcelToDatabase(filePath: string, tableID: string) {
     } finally {
       connection.release();
     }
-  } catch (error) {
-    console.error("Error uploading and inserting data:", error);
-    throw error;
-  } finally {
-    // Clean up the uploaded file
-    await fsExtra.remove(filePath);
-  }
+    } catch (error) {
+      console.error("Error uploading and inserting data:", error);
+      throw error;
+    } finally {
+      // Clean up the uploaded file
+      await fsExtra.remove(filePath);
+    }
+
 }
+
 
 
 
@@ -132,7 +162,7 @@ const excelPluginUpload: FastifyPluginCallback = (fastify, _options, done) => {
 
       try {
         // Now that the file is fully saved, proceed with database insertion
-        await uploadExcelToDatabase(filePath, tableID);
+        await uploadExcelToDatabase(filePath, tableID, reply);
         reply.send({ success: true, message: "Data uploaded and inserted successfully" });
       } catch (error) {
         reply.status(500).send({ success: false, message: "Error uploading and inserting data", error });

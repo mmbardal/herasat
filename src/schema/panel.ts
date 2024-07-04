@@ -359,10 +359,12 @@ export interface changePasswordType {
   newPass:string;
 }
 
-export interface TableIdentification {
+export interface TableRecall {
   token: string;
   tableID: string;
   filters?: [string, string][];
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 export interface ColumnProperties {

@@ -10,7 +10,7 @@ import type {
   GetType,
   newTable,
   searchType,
-  TableIdentification
+  TableRecall
 } from "@/schema/panel";
 import { comboRegexGenerator, searchActionType } from "@/schema/panel";
 
@@ -771,9 +771,9 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
 }
 
 async function retrieveTableColumns(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  let jbody: TableIdentification;
+  let jbody: TableRecall;
   try {
-    jbody = request.body as TableIdentification;
+    jbody = request.body as TableRecall;
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -809,9 +809,9 @@ async function retrieveTableColumns(request: fastify.FastifyRequest, reply: fast
 }
 
 async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  let jbody: TableIdentification;
+  let jbody: TableRecall;
   try {
-    jbody = request.body as TableIdentification;
+    jbody = request.body as TableRecall;
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
     throw new Error();
@@ -836,7 +836,7 @@ async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify
     const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
 
     // Pass filters to the tableDataOutput function if needed
-    await tableDataOutput(tableID, reply, filters);
+    await tableDataOutput(tableID, reply, filters, jbody.pageNumber, jbody.pageSize);
 
     return;
   } catch (e: unknown) {

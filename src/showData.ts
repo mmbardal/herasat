@@ -33,19 +33,23 @@ export async function columnNamesOutput(
 export async function tableDataOutput(
   tableID: string,
   filtering: filter[], 
-  reply: FastifyReply
+  reply: FastifyReply,
+  pageNumber: number = 1, // Default page number to 1 if not provided
+  pageSize: number = 100
 ): Promise<void> {
-  const tableName = "table_"+tableID;
+  const tableName = "table_" + tableID;
+  const offset = (pageNumber - 1) * pageSize; // Calculate offset based on page number
+
   try {
-    let query = `SELECT * FROM ${tableName}`
-    if (filtering.length > 0)
-    {
-      query += ` WHERE ${filtering[0].columnName} LIKE '%${DB.conn.escape(filtering[0].contain)}%'`
-      for (let i = 1; i < filtering.length; i++)
-      {
-        query += ` AND ${filtering[i].columnName} LIKE '%${DB.conn.escape(filtering[i].contain)}%'`
+    let query = `SELECT * FROM ${tableName}`;
+    if (filtering.length > 0) {
+      query += ` WHERE ${filtering[0].columnName} LIKE '%${DB.conn.escape(filtering[0].contain)}%'`;
+      for (let i = 1; i < filtering.length; i++) {
+        query += ` AND ${filtering[i].columnName} LIKE '%${DB.conn.escape(filtering[i].contain)}%'`;
       }
     }
+    query += ` LIMIT ${pageSize} OFFSET ${offset}`; // Add LIMIT and OFFSET for pagination
+
     const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(query);
     if (rows.length === 0 || !rows[0].columns_properties) {
       reply.status(404).send({ success: false, message: "Table ID not found or column properties not available" });
