@@ -1,30 +1,27 @@
-import { FastifyReply, FastifyRequest } from "fastify";
+import { FastifyReply } from "fastify";
 import { DB } from "./db";
+import { ColumnProperties } from "./schema/panel";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { filter } from "./schema/panel";
 
-// Function to extract column names and generate JSON output
 export async function columnNamesOutput(
   tableID: string, 
   reply: FastifyReply
 ): Promise<void> {
-
   try {
-    // Step 1: Get column names from col_properties using tableID
     const [jsonRows] = await DB.conn.execute<MySQLRowDataPacket[]>(
-      `SELECT col_properties
+      `SELECT columns_properties
        FROM all_tables
        WHERE table_id = ?;`,
       [tableID]
     );
-
-    if (jsonRows.length === 0 || !jsonRows[0].col_properties) {
+    if (jsonRows.length === 0 || !jsonRows[0].columns_properties) {
       reply.status(404).send({ success: false, message: "Table ID not found or column properties not available" });
       return;
     }
 
-    const colProperties: { name: string }[] = jsonRows[0].col_properties;
-    const columnNames = colProperties.map((item) => item.name);
+    const columns_properties: { name: string }[] = jsonRows[0].columns_properties;
+    const columnNames = columns_properties.map((item) => item.name);
 
     reply.status(200).send(columnNames);
   } catch (error) {
@@ -51,6 +48,10 @@ export async function tableDataOutput(
       }
     }
     const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(query);
+    if (rows.length === 0 || !rows[0].columns_properties) {
+      reply.status(404).send({ success: false, message: "Table ID not found or column properties not available" });
+      return;
+    }
 
     reply.status(200).send(rows);
   } catch (error) {

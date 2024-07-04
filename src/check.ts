@@ -30,7 +30,7 @@ export async function checkExcelReadAccess(id: number, ExcelId: number, access: 
                                                              from access_permissions
                                                              where table_id = ?
                                                                and user_id = ?
-                                                               and permission = ?`,
+                                                               and permission = ?;`,
     [ExcelId, id, access]
   );
   return value.length != 0;

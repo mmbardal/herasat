@@ -8,7 +8,8 @@ import type {
   fields,
   GetType,
   newTable,
-  searchType
+  searchType,
+  TableIdentification
 } from "@/schema/panel";
 import { comboRegexGenerator, searchActionType } from "@/schema/panel";
 
@@ -16,12 +17,13 @@ import { DB } from "@/db";
 
 import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
-import { changeReadAccessFunc, checkPermission, validateToken } from "@/check";
+import { changeReadAccessFunc, checkPermission, validateToken,checkExcelReadAccess } from "@/check";
 import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "@/constants";
-import { tableBuilder, addColumnsToTable, Column, AddColumns } from "../table_builder";
+import { tableBuilder, addColumnsToTable, AddColumns } from "../table_builder";
 import * as bcrypt from "bcrypt";
 import type { SetWriteAccess, Vahed } from "@/schema/vahed";
 import type { User } from "@/apis/v1/login";
+import { generateTableJsonOutput } from "@/showData";
 
 async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: newTable;
@@ -818,16 +820,108 @@ async function editWriteAccess(request: fastify.FastifyRequest, reply: fastify.F
   }
 }
 
+async function showData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  let jbody: TableIdentification;
+  try {
+    jbody = request.body as TableIdentification;
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequestt" });
+
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const tableID: string = jbody.tableID;
+
+  try {
+    const user = await validateToken(token) ;
+    
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    const user_val = JSON.parse(user) as User
+    if (! await checkExcelReadAccess(user_val.id,Number(tableID),"read")){
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+    
+    await generateTableJsonOutput(tableID, reply)
+
+    return;
+
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+
+    throw new Error();
+  }
+}
+
+
+
 export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
   fastifier.post(`${prefix ?? ""}/newtable`, cTable);
   fastifier.post(`${prefix ?? ""}/updatetable`, uTable);
   fastifier.post(`${prefix ?? ""}/getDatatable`, rTable);
   fastifier.post(`${prefix ?? ""}/addColumn`, reusetable);
+  fastifier.post(`${prefix ?? ""}/showData`, showData);
   fastifier.post(`${prefix ?? ""}/approvetable`, approve);
   fastifier.post(`${prefix ?? ""}/search`, search);
   fastifier.post(`${prefix ?? ""}/changePermission`, changePermission);
   fastifier.post(`${prefix ?? ""}/changeReadWritePermission`, changeReadWritePermission);
   fastifier.post(`${prefix ?? ""}/changepassword`, changePassword);
   fastifier.post(`${prefix ?? ""}/setwriteaccess`, setWriteAccess);
-  fastifier.post(`${prefix ?? ""}/editwriteaccess`, editWriteAccess);
+  //fastifier.post(`${prefix ?? ""}/editwriteaccess`, editWriteAccess);
 }
+
+// async function editWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+//   let jbody: changePasswordType;
+//   try {
+//     jbody = request.body as changePasswordType;
+//     // validate<loginType>(jbody,schema.loginValidate);
+//   } catch (e: unknown) {
+//     await reply.code(400).send({ message: "badrequestt" });
+//
+//     throw new Error();
+//   }
+//
+//   const token = jbody.token;
+//   const oldPass: string = jbody.oldPass;
+//   const newPass: string = jbody.newPass;
+//
+//   try {
+//     const user = await validateToken(token);
+//     if (user === null) {
+//       await reply.code(401).send({ message: "not authenticated" });
+//       return;
+//     }
+//     const userVal = JSON.parse(user) as User;
+//     const [RawValue] = await DB.conn.query<MySQLRowDataPacket[]>(
+//       `select *
+//        from user
+//        where id = ?`,
+//       [userVal.id]
+//     );
+//     const value = RawValue as User[];
+//     const auth: boolean = await bcrypt.compare(oldPass, value[0].password);
+//     if (auth) {
+//       await DB.conn.execute<MySQLRowDataPacket[]>(
+//         `update user
+//          SET password = ?
+//          where id = ?`,
+//         [await bcrypt.hash(newPass, 12), userVal.id]
+//       );
+//       await reply.code(200).send({ message: "updated" });
+//       return;
+//     } else {
+//       await reply.code(403).send({ message: "old password is wrong" });
+//       return;
+//     }
+//   } catch (e: unknown) {
+//     logError(e);
+//     await reply.code(500);
+//
+//     throw new Error();
+//   }
+// }

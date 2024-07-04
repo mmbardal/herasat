@@ -11,7 +11,7 @@ export class DB {
 
     static get conn():Pool {
         assert(this.pool!=null,"use DB.init first");
-        return this.pool!;
+        return this.pool;
     }
     static init(maxCon: number = 3): Pool {
         this.pool ??= mysql.createPool({

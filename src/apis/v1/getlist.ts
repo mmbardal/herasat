@@ -30,8 +30,8 @@ export interface userInterface {
 }
 
 interface Prov {
-  province: string;
-  branches: string[];
+  province: User;
+  branches: User[];
 }
 
 async function getDeputy(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
@@ -313,24 +313,25 @@ async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     const [value] = (await DB.conn.query<MySQLRowDataPacket[]>(
-      `select distinct province
+      `select  id,province
        from user
-       where province is not null`
-    )) as unknown as userInterface;
+       where province is not null and branch is null`
+    )) as unknown as User;
     const listProv: Prov[] = [];
     for (const item of value) {
-      const prov: Prov = { province: "default", branches: [] };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const prov: Prov = { province: item, branches: [] };
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
-      prov.province = item.province;
+
       listProv.push(prov);
     }
     for (const item of listProv) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       const [subUser] = (await DB.conn.query<MySQLRowDataPacket[]>(
-        `select branch
+        `select id, branch
          from user
-         where province = ${item.province}`
+         where province = ${item.province.province} and branch is not null`
       )) as unknown as userInterface;
       for (const item1 of subUser) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-member-access
