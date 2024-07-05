@@ -7,8 +7,7 @@ import { PanelAPI } from "@/apis/v1/panel";
 import { LoginAPI } from "@/apis/v1/login";
 import { RegisterAPI } from "@/apis/v1/register";
 
-import excelPluginDownload from "@/excel_download";
-import excelPluginUpload from "@/excel_upload";
+import { ExcelFileAPI } from "@/excel_upload";
 import { GetListAPI } from "@/apis/v1/getlist";
 import { GetListBranchAPI } from "@/apis/v1/vahed";
 
@@ -42,9 +41,7 @@ PanelAPI(fastifier, "/v1");
 RegisterAPI(fastifier, "/v1");
 GetListAPI(fastifier, "/v1");
 GetListBranchAPI(fastifier, "/v1");
-
-await fastifier.register(excelPluginUpload);
-await fastifier.register(excelPluginDownload);
+ExcelFileAPI(fastifier, "/v1");
 
 await fastifier.listen({ port: 3000 });
 

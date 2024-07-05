@@ -3,19 +3,15 @@ import ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as fsExtra from "fs-extra";
 import * as path from "path";
-import { FastifyPluginCallback, FastifyRequest, fastify } from "fastify";
-import fastifyMultipart from "@fastify/multipart";
+import { fastify } from "fastify";
 import { fileURLToPath } from 'url';
 import type { MySQLRowDataPacket } from "@fastify/mysql";
+import { excelPluginDownloadProvince, excelPluginDownloadVahed } from "./excel_download";
 
 
 // Equivalent to `__dirname` in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-interface RequestParams {
-  tableID: string;
-}
 
 // Function to upload and insert data from Excel to MySQL
 async function uploadExcelToDatabase(filePath: string, tableID: string, reply: fastify.FastifyReply) {
@@ -122,60 +118,51 @@ async function uploadExcelToDatabase(filePath: string, tableID: string, reply: f
 }
 
 
+async function excelPluginUpload(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
 
+  // todo: token validation
 
-const excelPluginUpload: FastifyPluginCallback = (fastify, _options, done) => {
-  // Register the multipart plugin
-  fastify.register(fastifyMultipart);
+  const tableID = request.params.tableID;
 
-  // Define the route to upload Excel file
-  fastify.post<{ Params: RequestParams }>(
-    "/upload-excel/:tableID",
-    async (
-      request: FastifyRequest<{
-        Params: RequestParams;
-      }>,
-      reply
-    ) => {
-      const tableID = request.params.tableID;
+  const data = await request.file();
+  if (!data) {
+    reply.status(400).send({ success: false, message: "No file uploaded" });
+    return;
+  }
+    
+  const uploadDir = path.join(__dirname, "uploads");
+  await fsExtra.ensureDir(uploadDir); // Ensure the uploads directory exists
+  const filePath = path.join(uploadDir, data.filename);
 
-      const data = await request.file();
-      if (!data) {
-        reply.status(400).send({ success: false, message: "No file uploaded" });
-        return;
-      }
-       
-      const uploadDir = path.join(__dirname, "uploads");
-      await fsExtra.ensureDir(uploadDir); // Ensure the uploads directory exists
-      const filePath = path.join(uploadDir, data.filename);
+  const fileWriteStream = fs.createWriteStream(filePath);
 
-      const fileWriteStream = fs.createWriteStream(filePath);
+  // Pipe the file stream to the write stream
+  data.file.pipe(fileWriteStream);
 
-      // Pipe the file stream to the write stream
-      data.file.pipe(fileWriteStream);
+  // Wait for the file to finish writing
+  await new Promise<void>((resolve, reject) => {
+    fileWriteStream.on("finish", resolve);
+    fileWriteStream.on("error", reject);
+  });
 
-      // Wait for the file to finish writing
-      await new Promise<void>((resolve, reject) => {
-        fileWriteStream.on("finish", resolve);
-        fileWriteStream.on("error", reject);
-      });
-
-      try {
-        // Now that the file is fully saved, proceed with database insertion
-        await uploadExcelToDatabase(filePath, tableID, reply);
-        reply.send({ success: true, message: "Data uploaded and inserted successfully" });
-      } catch (error) {
-        reply.status(500).send({ success: false, message: "Error uploading and inserting data", error });
-      } finally {
-        // Clean up the uploaded file
-        if (await fsExtra.pathExists(filePath)) {
-          await fsExtra.remove(filePath);
-        }
-      }
+  try {
+    // Now that the file is fully saved, proceed with database insertion
+    await uploadExcelToDatabase(filePath, tableID, reply);
+    reply.send({ success: true, message: "Data uploaded and inserted successfully" });
+  } catch (error) {
+    reply.status(500).send({ success: false, message: "Error uploading and inserting data", error });
+  } finally {
+    // Clean up the uploaded file
+    if (await fsExtra.pathExists(filePath)) {
+      await fsExtra.remove(filePath);
     }
-  );
+  }
+}
 
-  done();
-};
+export function ExcelFileAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
 
-export default excelPluginUpload;
+  fastifier.post(`${prefix ?? ""}/upload-excel/:tableID`, excelPluginUpload);
+  fastifier.post(`${prefix ?? ""}/export-excel-branch/:tableID`, excelPluginDownloadVahed);
+  fastifier.post(`${prefix ?? ""}/export-excel-province/:tableID`, excelPluginDownloadProvince);
+
+}

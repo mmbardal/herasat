@@ -28,6 +28,10 @@ export interface Vahed {
   id: number;
 }
 
+export interface Province {
+  id: number;
+}
+
 export interface SetWriteAccess {
   table: string;
   token: string;
