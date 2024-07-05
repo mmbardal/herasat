@@ -159,6 +159,44 @@ async function excelPluginUpload(request: fastify.FastifyRequest, reply: fastify
   }
 }
 
+// async function provinceApprove(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  // let jbody: TableRecall;
+  // try {
+  //   jbody = request.body as TableRecall;
+  // } catch (e: unknown) {
+  //   await reply.code(400).send({ message: "badrequestt" });
+  //   throw new Error();
+  // }
+
+  // const token = jbody.token;
+  // const tableID: string = jbody.tableID;
+
+  // try {
+  //   const user = await validateToken(token);
+  //   if (user === null) {
+  //     await reply.code(401).send({ message: "not authenticated" });
+  //     return;
+  //   }
+  //   const user_val = JSON.parse(user) as User;
+  //   if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
+  //     await reply.code(403).send({ message: "forbidden" });
+  //     return;
+  //   }
+
+  //   // Extract filters
+  //   const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
+
+  //   // Pass filters to the tableDataOutput function if needed
+  //   await tableDataOutput(tableID, reply, filters, jbody.pageNumber, jbody.pageSize);
+
+  //   return;
+  // } catch (e: unknown) {
+  //   logError(e);
+  //   await reply.code(500);
+  //   throw new Error();
+  // }
+// }
+
 export function ExcelFileAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
 
   fastifier.post(`${prefix ?? ""}/upload-excel/:tableID`, excelPluginUpload);
