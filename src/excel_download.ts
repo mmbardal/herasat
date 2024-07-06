@@ -1,14 +1,18 @@
 import ExcelJS from "exceljs";
 import { DB } from "./db";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
-import { fastify } from "fastify";
+import type * as fastify from "fastify";
+import { logError } from "./logger";
+import { checkExcelReadAccess, validateToken } from "./check";
+import { User } from "./apis/v1/login";
+import { fileRequests } from "./schema/panel";
 
 interface ColumnProperties {
   name: string;
 }
 
 // Function to query database, convert to Excel, and download
-export async function exportTableToExcelVahed(tableID: string): Promise<Buffer> {
+export async function exportTableToExcelVahed(tableID: string, vahedName: string): Promise<Buffer> {
   try {
     // Query the table to get the headers JSON
     const [jsonRows] = await DB.conn.execute<MySQLRowDataPacket[]>(
@@ -34,8 +38,32 @@ export async function exportTableToExcelVahed(tableID: string): Promise<Buffer> 
     // Add headers as the first row
     worksheet.addRow(headerNames);
 
+    let query = `SELECT * FROM table_${tableID}`;
+    try {
+      const columnQuery = `
+        SELECT COUNT(*) AS column_count
+        FROM information_schema.columns
+        WHERE table_schema = ?
+        AND table_name = ?;
+      `;
+  
+      const databaseName = 'herasat';
+      const tableName = "table_"+tableID;
+      const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
+  
+      if (rows.length > 0) {
+        query += ` WHERE col_${rows[0].column_count - 3} = ${vahedName}`;
+      } else {
+        throw new Error(`Table ${tableName} not found in database ${databaseName}.`);
+      }
+    } catch (error) {
+      console.error("Error retrieving column count:", error);
+      throw error;
+    }
+
     // Execute the query to get the data
-    const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(`SELECT * FROM table_${tableID}`);
+    const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(query);
+
 
     // Add rows
     for (const row of rows) {
@@ -63,7 +91,7 @@ export async function exportTableToExcelVahed(tableID: string): Promise<Buffer> 
   }
 }
 
-export async function exportTableToExcelProvince(tableID: string): Promise<Buffer> {
+export async function exportTableToExcelProvince(tableID: string, provinceName: string): Promise<Buffer> {
   try {
     // Query the table to get the headers JSON
     const [jsonRows] = await DB.conn.execute<MySQLRowDataPacket[]>(
@@ -89,8 +117,31 @@ export async function exportTableToExcelProvince(tableID: string): Promise<Buffe
     // Add headers as the first row
     worksheet.addRow(headerNames);
 
+    let query = `SELECT * FROM table_${tableID}`;
+    try {
+      const columnQuery = `
+        SELECT COUNT(*) AS column_count
+        FROM information_schema.columns
+        WHERE table_schema = ?
+        AND table_name = ?;
+      `;
+  
+      const databaseName = 'herasat';
+      const tableName = "table_"+tableID;
+      const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
+  
+      if (rows.length > 0) {
+        query += ` WHERE col_${rows[0].column_count - 2} = ${provinceName}`;
+      } else {
+        throw new Error(`Table ${tableName} not found in database ${databaseName}.`);
+      }
+    } catch (error) {
+      console.error("Error retrieving column count:", error);
+      throw error;
+    }
+
     // Execute the query to get the data
-    const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(`SELECT * FROM table_${tableID}`);
+    const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(query);
 
     // Add rows
     for (const row of rows) {
@@ -113,24 +164,86 @@ export async function exportTableToExcelProvince(tableID: string): Promise<Buffe
 }
 
 export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  const tableID = request.params.tableID;
-  const vahedName = "edg"; // todo: handle from branch user and edit SQL query
+
+  let jbody: fileRequests;
   try {
-    const buffer = await exportTableToExcelVahed(tableID);
+    jbody = request.body as fileRequests;;
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequestt" });
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const tableID: string = jbody.tableID;
+  let vahedName = jbody.vahedName;
+
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    const user_val = JSON.parse(user) as User;
+    if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+    vahedName = user_val.branch;
+
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
+  
+  try {
+    const buffer = await exportTableToExcelVahed(tableID, vahedName);
     reply
       .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       .header("Content-Disposition", `attachment; filename=export.xlsx`)
       .send(buffer);
-  } catch (error) {
-    reply.status(500).send({ success: false, message: "Error exporting Excel file", error });
+  } catch (e: unknown) {
+    logError(e);
+    reply.status(500).send({ success: false, message: "Error exporting Excel file", e });
   }
 }
 
 export async function excelPluginDownloadProvince(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  const tableID = request.params.tableID;
-  const provinceName = "edg"; // todo: handle from branch user and edit SQL query
+
+let jbody: fileRequests;
   try {
-    const buffer = await exportTableToExcelProvince(tableID);
+    jbody = request.body as fileRequests;;
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "badrequestt" });
+    throw new Error();
+  }
+
+  const token = jbody.token;
+  const tableID: string = jbody.tableID;
+  let provinceName = jbody.provinceName;
+
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    const user_val = JSON.parse(user) as User;
+    if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+
+    provinceName = user_val.province;
+
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
+  
+  try {
+    const buffer = await exportTableToExcelProvince(tableID, provinceName);
     reply
       .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       .header("Content-Disposition", `attachment; filename=export.xlsx`)

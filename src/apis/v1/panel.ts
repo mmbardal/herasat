@@ -836,7 +836,7 @@ async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify
     const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
 
     // Pass filters to the tableDataOutput function if needed
-    await tableDataOutput(tableID, reply, filters, jbody.pageNumber, jbody.pageSize);
+    await tableDataOutput(tableID, filters, reply, jbody.pageNumber, jbody.pageSize);
 
     return;
   } catch (e: unknown) {

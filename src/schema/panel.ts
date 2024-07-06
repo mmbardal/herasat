@@ -380,6 +380,14 @@ export interface filter{
   contain: string
 }
 
+export interface fileRequests{
+  token: string
+  tableID: string,
+  vahedName?: string,
+  provinceName?: string,
+  approval?: string
+}
+
 export const schema = {
   loginValidate,
   registerValidate,

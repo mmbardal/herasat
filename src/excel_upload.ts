@@ -3,46 +3,66 @@ import ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as fsExtra from "fs-extra";
 import * as path from "path";
-import { fastify } from "fastify";
 import { fileURLToPath } from 'url';
+import type { FastifyRequest, FastifyReply } from "fastify";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { excelPluginDownloadProvince, excelPluginDownloadVahed } from "./excel_download";
+import { fileRequests } from "./schema/panel";
+import { checkExcelReadAccess, validateToken } from "./check";
+import { User } from "./apis/v1/login";
+import { logError } from "./logger";
+import * as fastify from "fastify";
+import fastifyy from 'fastify';
+import fastifyMultipart from 'fastify-multipart';
 
+const app = fastifyy();
 
-// Equivalent to `__dirname` in ESM
+app.register(fastifyMultipart);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Function to upload and insert data from Excel to MySQL
-async function uploadExcelToDatabase(filePath: string, tableID: string, reply: fastify.FastifyReply) {
-  try {
-    const vahedName = "vahed";      //todo: fix vahedName
-    const provinceName = "ostan";      //todo: fix provinceName
+async function getColumnCount(tableName: string): Promise<number> {
+  const columnQuery = `
+    SELECT COUNT(*) AS column_count
+    FROM information_schema.columns
+    WHERE table_schema = ?
+    AND table_name = ?;
+  `;
 
-    // Check if there are any rows where the approve column is 1
-    const checkQuery = `SELECT COUNT(*) as count FROM tableName WHERE approve <> 2 AND approve <> 3 AND approve <> 4 AND approve <> 5 AND approve <> 6`; // Replace 'tableName' with the actual table name
+  const databaseName = 'herasat';
+  const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
+
+  if (rows.length > 0) {
+    return rows[0].column_count;
+  } else {
+    throw new Error(`Table ${tableName} not found in database ${databaseName}.`);
+  }
+}
+
+async function uploadExcelToDatabase(filePath: string, tableID: string, reply: FastifyReply, vahed: string, province: string) {
+  try {
+    const vahedName = vahed;
+    const provinceName = province;
+
+    const columnNumber = await getColumnCount(`table_${tableID}`);
+
+    const checkQuery = `SELECT COUNT(*) as count FROM table_${tableID} WHERE col_${columnNumber-1} <> 2 AND col_${columnNumber-1} <> 3 AND col_${columnNumber-1} <> 4 AND col_${columnNumber-1} <> 5 AND col_${columnNumber-1} <> 6`;
     const [checkResult] = await DB.conn.execute<MySQLRowDataPacket[]>(checkQuery);
-    
-    // If no rows are found, send a 404 forbidden reply and rollback the transaction
+
     if (checkResult[0].count === 0) {
       reply.status(404).send({ success: false, message: "No rows found with approve = 1" });
       return;
     }
 
-    // Load the workbook
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(filePath);
-
-    // Get the first worksheet
     const worksheet = workbook.worksheets[0];
 
-    // Prepare the data for insertion
     const rows: string[][] = [];
     worksheet.eachRow((row, rowNumber) => {
-      // Skip the first row (header)
       if (rowNumber === 1) return;
-
-      const rowData = (row.values as (string | number | boolean)[]).slice(1).map((value) => value.toString()); // Remove the empty first element and convert to string
+      const rowData = (row.values as (string | number | boolean)[]).slice(1).map((value) => value.toString());
       rows.push(rowData);
     });
 
@@ -50,16 +70,10 @@ async function uploadExcelToDatabase(filePath: string, tableID: string, reply: f
       throw new Error("No data to insert");
     }
 
-    // Add placeholders for the three additional values
-    const additionalValues = [vahedName, provinceName, '1']; // Replace with actual values
-
-    // Determine column names (n+3 columns)
+    const additionalValues = [vahedName, provinceName, '1'];
     const columns = rows[0].map((_, index) => `col_${index}`).join(", ") + `, col_${rows[0].length}, col_${rows[0].length + 1}, col_${rows[0].length + 2}`;
 
-    // Define maximum statement size (in bytes)
-    const maxStatementSize = 1024 * 1024; // 1024 KB
-
-    // Insert rows into the database using extended insert statements
+    const maxStatementSize = 1024 * 1024;
     let insertQuery = `INSERT INTO table_${tableID} (${columns}) VALUES `;
     let currentSize = insertQuery.length;
     const queries: string[] = [];
@@ -67,10 +81,7 @@ async function uploadExcelToDatabase(filePath: string, tableID: string, reply: f
     let valuesPart = "";
 
     rows.forEach((row, rowIndex) => {
-      // Add the additional values to each row
       const fullRow = row.concat(additionalValues);
-
-      // Cleanse the row values to prevent SQL injection
       const cleanedRow = fullRow.map(value => DB.conn.escape(value));
 
       const rowPlaceholder = `(${cleanedRow.map(() => "?").join(", ")})`;
@@ -79,9 +90,8 @@ async function uploadExcelToDatabase(filePath: string, tableID: string, reply: f
 
       currentSize += rowPlaceholder.length;
 
-      // If current size exceeds max statement size or it's the last row, create a new query
       if (currentSize > maxStatementSize || rowIndex === rows.length - 1) {
-        valuesPart = valuesPart.slice(0, -2); // Remove trailing comma and space
+        valuesPart = valuesPart.slice(0, -2);
         queries.push(insertQuery + valuesPart);
         valuesPart = "";
         currentSize = insertQuery.length;
@@ -91,8 +101,7 @@ async function uploadExcelToDatabase(filePath: string, tableID: string, reply: f
     const connection = await DB.conn.getConnection();
     await connection.beginTransaction();
     try {
-      // Delete rows where the value of the approve column is 1
-      const deleteQuery = `DELETE FROM ${"table_"+tableID} WHERE approve = 1 AND vahed = ${vahedName}`;
+      const deleteQuery = `DELETE FROM table_${tableID} WHERE col_${columnNumber-1} = 1 AND col_${columnNumber-3} = ${vahedName}`;
       await connection.execute(deleteQuery);
 
       for (const query of queries) {
@@ -107,100 +116,144 @@ async function uploadExcelToDatabase(filePath: string, tableID: string, reply: f
     } finally {
       connection.release();
     }
-    } catch (error) {
-      console.error("Error uploading and inserting data:", error);
-      throw error;
-    } finally {
-      // Clean up the uploaded file
-      await fsExtra.remove(filePath);
-    }
-
+  } catch (error) {
+    console.error("Error uploading and inserting data:", error);
+    throw error;
+  } finally {
+    await fsExtra.remove(filePath);
+  }
 }
 
+async function excelPluginUpload(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  let jbody: fileRequests;
+  try {
+    jbody = request.body as fileRequests;
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "bad request" });
+    throw new Error();
+  }
 
-async function excelPluginUpload(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
+  const token = jbody.token;
+  const tableID: string = jbody.tableID;
+  let vahedName = jbody.vahedName;
+  let provinceName = jbody.provinceName;
 
-  // todo: token validation
-
-  const tableID = request.params.tableID;
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    const user_val = JSON.parse(user) as User;
+    if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+    vahedName = user_val.branch;
+    provinceName = user_val.province;
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
 
   const data = await request.file();
   if (!data) {
     reply.status(400).send({ success: false, message: "No file uploaded" });
     return;
   }
-    
+
   const uploadDir = path.join(__dirname, "uploads");
-  await fsExtra.ensureDir(uploadDir); // Ensure the uploads directory exists
+  await fsExtra.ensureDir(uploadDir);
   const filePath = path.join(uploadDir, data.filename);
 
   const fileWriteStream = fs.createWriteStream(filePath);
-
-  // Pipe the file stream to the write stream
   data.file.pipe(fileWriteStream);
 
-  // Wait for the file to finish writing
   await new Promise<void>((resolve, reject) => {
     fileWriteStream.on("finish", resolve);
     fileWriteStream.on("error", reject);
   });
 
   try {
-    // Now that the file is fully saved, proceed with database insertion
-    await uploadExcelToDatabase(filePath, tableID, reply);
+    await uploadExcelToDatabase(filePath, tableID, reply, vahedName, provinceName);
     reply.send({ success: true, message: "Data uploaded and inserted successfully" });
   } catch (error) {
     reply.status(500).send({ success: false, message: "Error uploading and inserting data", error });
   } finally {
-    // Clean up the uploaded file
     if (await fsExtra.pathExists(filePath)) {
       await fsExtra.remove(filePath);
     }
   }
 }
 
-// async function provinceApprove(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  // let jbody: TableRecall;
-  // try {
-  //   jbody = request.body as TableRecall;
-  // } catch (e: unknown) {
-  //   await reply.code(400).send({ message: "badrequestt" });
-  //   throw new Error();
-  // }
+async function provinceApprove(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  let jbody: fileRequests;
+  try {
+    jbody = request.body as fileRequests;
+  } catch (e: unknown) {
+    await reply.code(400).send({ message: "bad request" });
+    throw new Error();
+  }
 
-  // const token = jbody.token;
-  // const tableID: string = jbody.tableID;
+  const token = jbody.token;
+  const tableID: string = jbody.tableID;
+  const approval = jbody.approval;
+  let vahedName = jbody.vahedName;
+  let provinceName = jbody.provinceName;
 
-  // try {
-  //   const user = await validateToken(token);
-  //   if (user === null) {
-  //     await reply.code(401).send({ message: "not authenticated" });
-  //     return;
-  //   }
-  //   const user_val = JSON.parse(user) as User;
-  //   if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
-  //     await reply.code(403).send({ message: "forbidden" });
-  //     return;
-  //   }
+  try {
+    const user = await validateToken(token);
+    if (user === null) {
+      await reply.code(401).send({ message: "not authenticated" });
+      return;
+    }
+    const user_val = JSON.parse(user) as User;
+    if (!await checkExcelReadAccess(user_val.id, Number(tableID), "read")) {
+      await reply.code(403).send({ message: "forbidden" });
+      return;
+    }
+    provinceName = user_val.province;
+  } catch (e: unknown) {
+    logError(e);
+    await reply.code(500);
+    throw new Error();
+  }
 
-  //   // Extract filters
-  //   const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
+  const columnNumber = await getColumnCount(`table_${tableID}`);
+  let updateQuery = ``;
 
-  //   // Pass filters to the tableDataOutput function if needed
-  //   await tableDataOutput(tableID, reply, filters, jbody.pageNumber, jbody.pageSize);
+  if (approval == "approve")
+  {
+    updateQuery = `
+    UPDATE table_${tableID}
+    SET col_${columnNumber-1} = 2
+    WHERE col_${columnNumber-3} = ${vahedName} AND col_${columnNumber-1} < 3 AND col_${columnNumber-1} <> 0;
+  `;
+  }
+  else if (approval == "disapprove")
+  {
+    updateQuery = `
+    UPDATE table_${tableID}
+    SET col_${columnNumber-1} = 0
+    WHERE col_${columnNumber-3} = ${vahedName} AND col_${columnNumber-1} < 3 AND col_${columnNumber-1} <> 0;
+  `;
+  }
 
-  //   return;
-  // } catch (e: unknown) {
-  //   logError(e);
-  //   await reply.code(500);
-  //   throw new Error();
-  // }
-// }
+  try {
+    const [result] = await DB.conn.execute(updateQuery);
+    console.log('Update successful:', result);
+    reply.send({ success: true, message: 'Update successful', result });
+  } catch (error) {
+    console.error('Error approving table:', error);
+    reply.status(500).send({ success: false, message: 'Error approving table', error });
+  }
+  
+}
 
 export function ExcelFileAPI(fastifier: fastify.FastifyInstance, prefix?: string): void {
-
-  fastifier.post(`${prefix ?? ""}/upload-excel/:tableID`, excelPluginUpload);
-  fastifier.post(`${prefix ?? ""}/export-excel-branch/:tableID`, excelPluginDownloadVahed);
-  fastifier.post(`${prefix ?? ""}/export-excel-province/:tableID`, excelPluginDownloadProvince);
-
+  fastifier.post(`${prefix ?? ""}/upload-excel`, excelPluginUpload);
+  fastifier.post(`${prefix ?? ""}/export-excel-branch`, excelPluginDownloadVahed);
+  fastifier.post(`${prefix ?? ""}/export-excel-province`, excelPluginDownloadProvince);
+  fastifier.post(`${prefix ?? ""}/approveVahedTable`, provinceApprove);
 }
