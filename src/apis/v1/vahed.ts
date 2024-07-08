@@ -1,5 +1,4 @@
 import type * as fastify from "fastify";
-import type { GetTableType } from "@/schema/panel";
 import { logError } from "@/logger";
 import { validateToken } from "@/check";
 import type { User } from "@/apis/v1/login";
@@ -29,7 +28,6 @@ async function table(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
     }
     const user_val = JSON.parse(user) as User;
     const role = user_val.role;
-    const id = user_val.id;
 
     console.log(role);
 

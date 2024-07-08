@@ -23,9 +23,9 @@ export const photoBucket: string = "photo-paziresh";
 //export const concurrency: number = releaseMode ? intValue("CONCURRENCY") : 30;
 
 //MySQL configs
-export const mysqlHost: string = releaseMode ? stringValue("MYSQL_HOST") : "192.168.101.64";
-export const mysqlUser: string = releaseMode ? stringValue("MYSQL_USER") : "mostafa";
-export const mysqlPass: string = releaseMode ? stringValue("MYSQL_PASS") : "2003";
+export const mysqlHost: string = releaseMode ? stringValue("MYSQL_HOST") : "localhost";
+export const mysqlUser: string = releaseMode ? stringValue("MYSQL_USER") : "root";
+export const mysqlPass: string = releaseMode ? stringValue("MYSQL_PASS") : "delete";
 export const mysqlDatabase = "herasat";
 export const mysqlPort: number = 3306;
 

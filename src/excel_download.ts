@@ -5,7 +5,7 @@ import type * as fastify from "fastify";
 import { logError } from "./logger";
 import { checkExcelReadAccess, validateToken } from "./check";
 import { User } from "./apis/v1/login";
-import { fileRequests } from "./schema/panel";
+import { excelRequests } from "./schema/panel";
 
 interface ColumnProperties {
   name: string;
@@ -52,7 +52,7 @@ export async function exportTableToExcelVahed(tableID: string, vahedName: string
       const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
   
       if (rows.length > 0) {
-        query += ` WHERE col_${rows[0].column_count - 3} = ${vahedName}`;
+        query += ` WHERE col_${rows[0].column_count - 3} = "${vahedName}"`;
       } else {
         throw new Error(`Table ${tableName} not found in database ${databaseName}.`);
       }
@@ -75,7 +75,7 @@ export async function exportTableToExcelVahed(tableID: string, vahedName: string
           rowData.push(row[key]);
         }
         
-        console.log(rowData); // To verify the rowData contents
+        //console.log(rowData); // To verify the rowData contents
         worksheet.addRow(rowData); // Add the rowData to the worksheet
       }
       
@@ -131,7 +131,7 @@ export async function exportTableToExcelProvince(tableID: string, provinceName: 
       const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
   
       if (rows.length > 0) {
-        query += ` WHERE col_${rows[0].column_count - 2} = ${provinceName}`;
+        query += ` WHERE col_${rows[0].column_count - 2} = "${provinceName}"`;
       } else {
         throw new Error(`Table ${tableName} not found in database ${databaseName}.`);
       }
@@ -143,14 +143,18 @@ export async function exportTableToExcelProvince(tableID: string, provinceName: 
     // Execute the query to get the data
     const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(query);
 
+
     // Add rows
     for (const row of rows) {
-      const rowData: any[] = [];
-      for (const key in row) {
-        rowData.push(row[key]);
-        console.log(rows.length);
+        const rowData: any[] = [];
+        const keys = Object.keys(row);
+      
+        for (const key of keys) {
+          rowData.push(row[key]);
+        }
+        
+        worksheet.addRow(rowData); // Add the rowData to the worksheet
       }
-    }
     
     // Write to buffer
     const buffer: Buffer = await workbook.xlsx.writeBuffer() as Buffer;
@@ -165,9 +169,9 @@ export async function exportTableToExcelProvince(tableID: string, provinceName: 
 
 export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
 
-  let jbody: fileRequests;
+  let jbody: excelRequests;
   try {
-    jbody = request.body as fileRequests;;
+    jbody = request.body as excelRequests;
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
     throw new Error();
@@ -175,7 +179,7 @@ export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, 
 
   const token = jbody.token;
   const tableID: string = jbody.tableID;
-  let vahedName = jbody.vahedName;
+  let vahedName = jbody.vahedName as string;
 
   try {
     const user = await validateToken(token);
@@ -188,7 +192,7 @@ export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, 
       await reply.code(403).send({ message: "forbidden" });
       return;
     }
-    vahedName = user_val.branch;
+    //vahedName = user_val.branch;
 
   } catch (e: unknown) {
     logError(e);
@@ -210,9 +214,9 @@ export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, 
 
 export async function excelPluginDownloadProvince(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
 
-let jbody: fileRequests;
+let jbody: excelRequests;
   try {
-    jbody = request.body as fileRequests;;
+    jbody = request.body as excelRequests;
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
     throw new Error();
@@ -220,7 +224,7 @@ let jbody: fileRequests;
 
   const token = jbody.token;
   const tableID: string = jbody.tableID;
-  let provinceName = jbody.provinceName;
+  let provinceName = jbody.provinceName as string;
 
   try {
     const user = await validateToken(token);
@@ -234,7 +238,7 @@ let jbody: fileRequests;
       return;
     }
 
-    provinceName = user_val.province;
+    //provinceName = user_val.province;
 
   } catch (e: unknown) {
     logError(e);

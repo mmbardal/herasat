@@ -770,43 +770,6 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
   }
 }
 
-async function retrieveTableColumns(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-  let jbody: TableRecall;
-  try {
-    jbody = request.body as TableRecall;
-  } catch (e: unknown) {
-    await reply.code(400).send({ message: "badrequestt" });
-
-    throw new Error();
-  }
-
-  const token = jbody.token;
-  const tableID: string = jbody.tableID;
-
-  try {
-    const user = await validateToken(token) ;
-    
-    if (user === null) {
-      await reply.code(401).send({ message: "not authenticated" });
-      return;
-    }
-    const user_val = JSON.parse(user) as User
-    if (! await checkExcelReadAccess(user_val.id,Number(tableID),"read")){
-      await reply.code(403).send({ message: "forbidden" });
-      return;
-    }
-    
-    await columnNamesOutput(tableID, reply)
-
-    return;
-
-  } catch (e: unknown) {
-    logError(e);
-    await reply.code(500);
-
-    throw new Error();
-  }
-}
 
 async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: TableRecall;
@@ -832,6 +795,13 @@ async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify
       return;
     }
 
+    const check = (await checkExcelReadAccess(user_val.id, parseInt(tableID),"read")) || (await checkExcelReadAccess(user_val.id, parseInt(tableID),"both"));
+    if (!check)
+    {
+      await reply.code(403).send({ message: "You do not have the permission to read this table." });
+      return;
+    }
+
     // Extract filters
     const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
 
@@ -852,8 +822,7 @@ export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): v
   fastifier.post(`${prefix ?? ""}/updatetable`, uTable);
   fastifier.post(`${prefix ?? ""}/getDatatable`, rTable);
   fastifier.post(`${prefix ?? ""}/addColumn`, reusetable);
-  fastifier.post(`${prefix ?? ""}/retrieveTableData`, retrieveTableData);
-  fastifier.post(`${prefix ?? ""}/retrieveTableColumns`, retrieveTableColumns);
+  fastifier.post(`${prefix ?? ""}/showData`, retrieveTableData);
   fastifier.post(`${prefix ?? ""}/approvetable`, approve);
   fastifier.post(`${prefix ?? ""}/search`, search);
   fastifier.post(`${prefix ?? ""}/changePermission`, changePermission);

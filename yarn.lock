@@ -296,9 +296,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fastify/multipart@npm:^8.2.0":
-  version: 8.2.0
-  resolution: "@fastify/multipart@npm:8.2.0"
+"@fastify/multipart@npm:^8.3.0":
+  version: 8.3.0
+  resolution: "@fastify/multipart@npm:8.3.0"
   dependencies:
     "@fastify/busboy": "npm:^2.1.0"
     "@fastify/deepmerge": "npm:^1.0.0"
@@ -306,7 +306,7 @@ __metadata:
     fastify-plugin: "npm:^4.0.0"
     secure-json-parse: "npm:^2.4.0"
     stream-wormhole: "npm:^1.1.0"
-  checksum: 10c0/2320fef4ec3aa92200330a51fccce0fa81127da5512d901c44468b201f8c9cd468ee9caec89a17631e6edee6c96c4c612eec5f157b10878b3faf789e8f4fc877
+  checksum: 10c0/1021675af149435b1e585cfcaf8aba848c3799cbc213c18a0e3d74c6d64d21db27572a99295a8da5263f5562869452234dea2680e83e248456d97b560fb627eb
   languageName: node
   linkType: hard
 
@@ -503,6 +503,15 @@ __metadata:
   dependencies:
     "@types/node": "npm:*"
   checksum: 10c0/dd7f05e183b9b1fc08ec499069febf197ab8e9c720766b5bbb5628395082e248f9a444c60882fe7788361fcadc302e21e055ab9c26a300f100e08791c353e6aa
+  languageName: node
+  linkType: hard
+
+"@types/busboy@npm:^1.5.4":
+  version: 1.5.4
+  resolution: "@types/busboy@npm:1.5.4"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/0bdd209069a445d5a71277e558978ec0db1b1a3d108335da96477d017177ae349c4d81d604db0bea19e3c99c10af2d60dbac20e36cef7cb7a517e5a4760738bd
   languageName: node
   linkType: hard
 
@@ -1090,6 +1099,15 @@ __metadata:
   version: 0.1.1
   resolution: "buffers@npm:0.1.1"
   checksum: 10c0/c7a3284ddb4f5c65431508be65535e3739215f7996aa03e5d3a3fcf03144d35ffca7d9825572e6c6c6007f5308b8553c7b2941fcf5e56fac20dedea7178f5f71
+  languageName: node
+  linkType: hard
+
+"busboy@npm:^1.6.0":
+  version: 1.6.0
+  resolution: "busboy@npm:1.6.0"
+  dependencies:
+    streamsearch: "npm:^1.1.0"
+  checksum: 10c0/fa7e836a2b82699b6e074393428b91ae579d4f9e21f5ac468e1b459a244341d722d2d22d10920cdd849743dbece6dca11d72de939fb75a7448825cf2babfba1f
   languageName: node
   linkType: hard
 
@@ -1766,7 +1784,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify-multipart@npm:*":
+"fastify-multipart-deprecated@npm:fastify-multipart@5.3.1, fastify-multipart@npm:*":
   version: 5.3.1
   resolution: "fastify-multipart@npm:5.3.1"
   dependencies:
@@ -1779,6 +1797,16 @@ __metadata:
     secure-json-parse: "npm:^2.4.0"
     stream-wormhole: "npm:^1.1.0"
   checksum: 10c0/9068202c8e89535df46d58aa32a4db7489ffa8c71a5a39b850a903c96b958b40093b327cdd354e8f92b1ee8767072614cdc0c05b6aabb1f339a6e9f027069019
+  languageName: node
+  linkType: hard
+
+"fastify-multipart@npm:^5.4.0":
+  version: 5.4.0
+  resolution: "fastify-multipart@npm:5.4.0"
+  dependencies:
+    fastify-multipart-deprecated: "npm:fastify-multipart@5.3.1"
+    process-warning: "npm:^1.0.0"
+  checksum: 10c0/8803466e4ab9a3c94358c31f719b7aa781e119a345946b1f0897c188c378cd089096eae990e9388c86b230b6596684f7a032d55fa5f4e4e7a61f8852a8e3c10c
   languageName: node
   linkType: hard
 
@@ -2130,19 +2158,22 @@ __metadata:
   resolution: "herasat@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.3.0"
-    "@fastify/multipart": "npm:^8.2.0"
+    "@fastify/multipart": "npm:^8.3.0"
     "@fastify/mysql": "npm:^4.3.0"
     "@types/bcrypt": "npm:^5.0.2"
+    "@types/busboy": "npm:^1.5.4"
     "@types/fastify-multipart": "npm:^0.7.0"
     "@types/formidable": "npm:^3"
     "@types/fs-extra": "npm:^11"
     "@types/node": "npm:^20.12.12"
     ajv: "npm:^8.13.0"
     bcrypt: "npm:^5.1.1"
+    busboy: "npm:^1.6.0"
     eslint: "npm:^9.3.0"
     eslint-config-prettier: "npm:^9.1.0"
     exceljs: "npm:^4.4.0"
     fastify: "npm:^4.27.0"
+    fastify-multipart: "npm:^5.4.0"
     formidable: "npm:^3.5.1"
     fs-extra: "npm:^11.2.0"
     prettier: "npm:^3.2.5"
@@ -3180,6 +3211,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"process-warning@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "process-warning@npm:1.0.0"
+  checksum: 10c0/43ec4229d64eb5c58340c8aacade49eb5f6fd513eae54140abf365929ca20987f0a35c5868125e2b583cad4de8cd257beb5667d9cc539d9190a7a4c3014adf22
+  languageName: node
+  linkType: hard
+
 "process-warning@npm:^3.0.0":
   version: 3.0.0
   resolution: "process-warning@npm:3.0.0"
@@ -3607,6 +3645,13 @@ __metadata:
   version: 1.1.0
   resolution: "stream-wormhole@npm:1.1.0"
   checksum: 10c0/50800bcc919c01085b0bafa175c61a0c0bec27987dcc20aec92f8125bdc8b191102a030e114760d2ac86265eea65627d0145eea3adb8cb4453b3295e4468661a
+  languageName: node
+  linkType: hard
+
+"streamsearch@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "streamsearch@npm:1.1.0"
+  checksum: 10c0/fbd9aecc2621364384d157f7e59426f4bfd385e8b424b5aaa79c83a6f5a1c8fd2e4e3289e95de1eb3511cb96bb333d6281a9919fafce760e4edb35b2cd2facab
   languageName: node
   linkType: hard
 

@@ -6,10 +6,10 @@ import { mysqlHost, mysqlPass, mysqlUser } from "@/constants";
 import { PanelAPI } from "@/apis/v1/panel";
 import { LoginAPI } from "@/apis/v1/login";
 import { RegisterAPI } from "@/apis/v1/register";
-
 import { ExcelFileAPI } from "@/excel_upload";
 import { GetListAPI } from "@/apis/v1/getlist";
 import { GetListBranchAPI } from "@/apis/v1/vahed";
+import fastifyMultipart from "@fastify/multipart";
 
 const fastifier = fastify();
 
@@ -35,6 +35,8 @@ try {
   console.log("------------------------------------------------");
   process.exit(1);
 }
+
+await fastifier.register(fastifyMultipart);
 
 LoginAPI(fastifier, "/v1");
 PanelAPI(fastifier, "/v1");

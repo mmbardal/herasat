@@ -380,7 +380,20 @@ export interface filter{
   contain: string
 }
 
+export interface multipartString{
+  value: string
+}
+
 export interface fileRequests{
+  token: multipartString
+  tableID: multipartString,
+  vahedName?: multipartString,
+  provinceName?: multipartString,
+  approval?: multipartString,
+  file: any
+}
+
+export interface excelRequests{
   token: string
   tableID: string,
   vahedName?: string,
