@@ -4,7 +4,8 @@ import { validateToken } from "@/check";
 import type { User } from "@/apis/v1/login";
 import { DB } from "@/db";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
-import { GetTableBranchType, getTableBranchValidate } from "@/schema/vahed";
+import type { GetTableBranchType} from "@/schema/vahed";
+import { getTableBranchValidate } from "@/schema/vahed";
 import { validate } from "@/utils";
 
 async function table(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {

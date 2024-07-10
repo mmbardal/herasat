@@ -51,11 +51,11 @@ export async function exportTableToExcelVahed(tableID: string, vahedName: string
         WHERE table_schema = ?
         AND table_name = ?;
       `;
-  
+
       const databaseName = 'herasat';
       const tableName = "table_"+tableID;
       const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
-  
+
       if (rows.length > 0) {
         query += ` WHERE col_${rows[0].column_count - 3} = "${vahedName}"`;
       } else {
@@ -75,15 +75,15 @@ export async function exportTableToExcelVahed(tableID: string, vahedName: string
         const rowData: unknown[] = [];
         const keys = Object.keys(row);
         const keysToInclude = keys.slice(0, -3); // Exclude the last three keys
-      
+
         for (const key of keysToInclude) {
           rowData.push(row[key]);
         }
-        
+
         //console.log(rowData); // To verify the rowData contents
         worksheet.addRow(rowData); // Add the rowData to the worksheet
       }
-      
+
 
     // Write to buffer
     const buffer: Buffer = await workbook.xlsx.writeBuffer() as Buffer;
@@ -106,10 +106,11 @@ export async function exportTableToExcelProvince(tableID: string, provinceName: 
       [tableID]
     );
 
-    if (jsonRows.length === 0 || !jsonRows[0].columns_properties) {
+    if (jsonRows.length === 0 || (jsonRows[0].columns_properties === 0)) {
       throw new Error("Table ID not found or headers not available");
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const columnsProperties: ColumnProperties[] = jsonRows[0].columns_properties;
     // Extract column names from JSON objects
     const headerNames: string[] = columnsProperties.map((item: ColumnProperties) => item.name);
@@ -130,11 +131,11 @@ export async function exportTableToExcelProvince(tableID: string, provinceName: 
         WHERE table_schema = ?
         AND table_name = ?;
       `;
-  
+
       const databaseName = 'herasat';
       const tableName = "table_"+tableID;
       const [rows] = await DB.conn.execute<MySQLRowDataPacket[]>(columnQuery, [databaseName, tableName]);
-  
+
       if (rows.length > 0) {
         query += ` WHERE col_${rows[0].column_count - 2} = "${provinceName}"`;
       } else {
@@ -151,16 +152,16 @@ export async function exportTableToExcelProvince(tableID: string, provinceName: 
 
     // Add rows
     for (const row of rows) {
-        const rowData: any[] = [];
+        const rowData: string[] = [];
         const keys = Object.keys(row);
-      
+
         for (const key of keys) {
-          rowData.push(row[key]);
+          rowData.push(row[key] as string);
         }
-        
+
         worksheet.addRow(rowData); // Add the rowData to the worksheet
       }
-    
+
     // Write to buffer
     const buffer: Buffer = await workbook.xlsx.writeBuffer() as Buffer;
 
@@ -184,7 +185,7 @@ export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, 
 
   const token = jbody.token;
   const tableID: string = jbody.tableID;
-  let vahedName = jbody.vahedName as string;
+  let vahedName: string;
 
   try {
     const user = await validateToken(token);
@@ -197,23 +198,29 @@ export async function excelPluginDownloadVahed(request: fastify.FastifyRequest, 
       await reply.code(403).send({ message: "forbidden" });
       return;
     }
-    //vahedName = user_val.branch;
+    if (jbody.vahedName == null)
+    {
+      vahedName = user_val.branch;
+    }
+    else {
+      vahedName = jbody.vahedName;
+    }
 
   } catch (e: unknown) {
     logError(e);
     await reply.code(500);
     throw new Error();
   }
-  
+
   try {
     const buffer = await exportTableToExcelVahed(tableID, vahedName);
-    reply
+    await reply
       .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       .header("Content-Disposition", `attachment; filename=export.xlsx`)
       .send(buffer);
   } catch (e: unknown) {
     logError(e);
-    reply.status(500).send({ success: false, message: "Error exporting Excel file", e });
+    await reply.status(500).send({ success: false, message: "Error exporting Excel file", e });
   }
 }
 
@@ -229,7 +236,7 @@ let jbody: excelRequests;
 
   const token = jbody.token;
   const tableID: string = jbody.tableID;
-  let provinceName = jbody.provinceName as string;
+  let provinceName = jbody.provinceName;
 
   try {
     const user = await validateToken(token);
@@ -243,22 +250,21 @@ let jbody: excelRequests;
       return;
     }
 
-    //provinceName = user_val.province;
+    provinceName = user_val.province;
 
   } catch (e: unknown) {
     logError(e);
     await reply.code(500);
     throw new Error();
   }
-  
+
   try {
     const buffer = await exportTableToExcelProvince(tableID, provinceName);
-    reply
+    await reply
       .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       .header("Content-Disposition", `attachment; filename=export.xlsx`)
       .send(buffer);
   } catch (error) {
-    reply.status(500).send({ success: false, message: "Error exporting Excel file", error });
+    await reply.status(500).send({ success: false, message: "Error exporting Excel file", error });
   }
 }
-  

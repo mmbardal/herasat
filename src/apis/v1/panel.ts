@@ -11,8 +11,8 @@ import type {
   newTable,
   searchType,
   TableRecall
-} from "@/schema/panel";
-import { AddColumns, comboRegexGenerator, searchActionType } from "@/schema/panel";
+, AddColumns} from "@/schema/panel";
+import { comboRegexGenerator, searchActionType } from "@/schema/panel";
 
 import { DB } from "@/db";
 

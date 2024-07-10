@@ -452,6 +452,15 @@ export interface excelRequests {
   approval?: string;
 }
 
+export interface multipartParts {
+  file: string;
+  filename: string;
+  value: string;
+  fieldname: string;
+  type: string;
+}
+
+
 export const schema = {
   loginValidate,
   registerValidate,
