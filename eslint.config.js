@@ -1,31 +1,38 @@
-import eslint from "@eslint/js";
-import tseslint from "typescript-eslint";
+// @ts-check
 
-// Plugins
-import eslintConfigPrettier from "eslint-config-prettier";
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import globals from 'globals';
+
+// Custom Rules
+import typescriptRules from './lints/typescript/index.js';
+
+import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   eslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
-
-  {
-    languageOptions: {
-      
-      parserOptions: {
-        project: true,
-        tsconfigRootDir: import.meta.dirname
-      }
-    }
-  },
 
   // TypeScript Rules
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      ...typescriptRules,
+    },
   },
 
   {
-    ignores: ["lints"]
+    ignores: ['dist', 'lints', 'eslint.config.js'],
   },
 
   eslintConfigPrettier
