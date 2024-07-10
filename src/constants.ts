@@ -25,7 +25,7 @@ export const photoBucket: string = "photo-paziresh";
 //MySQL configs
 export const mysqlHost: string = releaseMode ? stringValue("MYSQL_HOST") : "localhost";
 export const mysqlUser: string = releaseMode ? stringValue("MYSQL_USER") : "root";
-export const mysqlPass: string = releaseMode ? stringValue("MYSQL_PASS") : "delete";
+export const mysqlPass: string = releaseMode ? stringValue("MYSQL_PASS") : "2003";
 export const mysqlDatabase = "herasat";
 export const mysqlPort: number = 3306;
 

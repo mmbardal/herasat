@@ -38,7 +38,7 @@ export interface SetWriteAccess {
   users: Vahed[];
 }
 
-const getWriteAccessValidate = ajv.compile<getWriteAccess>({
+export const getWriteAccessValidate = ajv.compile<getWriteAccess>({
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": ["token", "tableId"],
@@ -54,7 +54,7 @@ export interface getWriteAccess {
   tableId: number;
 }
 
-const getTableBranchValidate = ajv.compile<GetTableBranchType>({
+export const getTableBranchValidate = ajv.compile<GetTableBranchType>({
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": ["token", "offset", "branchId"],
@@ -71,4 +71,5 @@ export interface GetTableBranchType {
   token: string;
   offset: number;
   branchId: number;
+
 }

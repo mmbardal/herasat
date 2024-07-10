@@ -4,25 +4,30 @@ import type { MySQLRowDataPacket } from "@fastify/mysql";
 import type * as fastify from "fastify";
 import { logError } from "./logger";
 import { checkExcelReadAccess, validateToken } from "./check";
-import { User } from "./apis/v1/login";
-import { excelRequests } from "./schema/panel";
+import type { User } from "./apis/v1/login";
+import type { excelRequests } from "./schema/panel";
 
 interface ColumnProperties {
   name: string;
 }
 
+interface Column extends MySQLRowDataPacket {
+  columns_properties: ColumnProperties[] | null;
+}
+
+
 // Function to query database, convert to Excel, and download
 export async function exportTableToExcelVahed(tableID: string, vahedName: string): Promise<Buffer> {
   try {
     // Query the table to get the headers JSON
-    const [jsonRows] = await DB.conn.execute<MySQLRowDataPacket[]>(
+    const [jsonRows] = await DB.conn.execute<Column[]>(
       `SELECT columns_properties
        FROM all_tables
        WHERE table_id = ?;`,
       [tableID]
     );
 
-    if (jsonRows.length === 0 || !jsonRows[0].columns_properties) {
+    if (jsonRows.length === 0 || jsonRows[0].columns_properties === null) {
       throw new Error("Table ID not found or headers not available");
     }
 
@@ -67,7 +72,7 @@ export async function exportTableToExcelVahed(tableID: string, vahedName: string
 
     // Add rows
     for (const row of rows) {
-        const rowData: any[] = [];
+        const rowData: unknown[] = [];
         const keys = Object.keys(row);
         const keysToInclude = keys.slice(0, -3); // Exclude the last three keys
       

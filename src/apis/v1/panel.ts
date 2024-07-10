@@ -20,17 +20,21 @@ import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
 import { changeReadAccessFunc, checkPermission, validateToken,checkExcelReadAccess } from "@/check";
 import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "@/constants";
-import { tableBuilder, addColumnsToTable, AddColumns } from "../table_builder";
+import type { AddColumns } from "../table_builder";
+import { tableBuilder, addColumnsToTable } from "../table_builder";
 import * as bcrypt from "bcrypt";
 import type { SetWriteAccess, Vahed } from "@/schema/vahed";
 import type { User } from "@/apis/v1/login";
-import { tableDataOutput, columnNamesOutput } from "@/showData";
-
+import { validate } from "@/utils";
+import { schema } from "@/schema/panel";
+//columnNamesOutput removed
+import { tableDataOutput } from "@/showData";
+//schema
 async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: newTable;
   try {
     jbody = request.body as newTable;
-    // validate<loginType>(jbody,schema.loginValidate);
+     //validate<newTable>(jbody,schema.);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -127,7 +131,7 @@ async function cTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
     throw new Error();
   }
 }
-
+//schema
 async function uTable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: editTable;
   try {
@@ -242,7 +246,7 @@ async function rTable(request: fastify.FastifyRequest, reply: fastify.FastifyRep
   let jbody: GetType;
   try {
     jbody =request.body as GetType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetType>(jbody,schema.getValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -284,7 +288,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
   let jbody: ApproveType;
   try {
     jbody =request.body as ApproveType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<ApproveType>(jbody,schema.approveValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -457,7 +461,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     throw new Error();
   }
 }
-
+// not have schema todo: mostafa
 async function reusetable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: AddColumns;
   try {
@@ -493,7 +497,7 @@ async function search(request: fastify.FastifyRequest, reply: fastify.FastifyRep
   let jbody: searchType;
   try {
     jbody =request.body as searchType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<searchType>(jbody,schema.searchValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -552,7 +556,7 @@ async function changePermission(request: fastify.FastifyRequest, reply: fastify.
   let jbody: changePermissionType;
   try {
     jbody = request.body as changePermissionType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<changePermissionType>(jbody,schema.changePermission);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -615,7 +619,7 @@ async function changeReadWritePermission(request: fastify.FastifyRequest, reply:
   let jbody: changeReadWritePermissionType;
   try {
     jbody = request.body as changeReadWritePermissionType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<changeReadWritePermissionType>(jbody,schema.changeReadPermission);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -681,7 +685,7 @@ async function changePassword(request: fastify.FastifyRequest, reply: fastify.Fa
   let jbody: changePasswordType;
   try {
     jbody = request.body as changePasswordType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<changePasswordType>(jbody,schema.changePassword);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -727,12 +731,12 @@ async function changePassword(request: fastify.FastifyRequest, reply: fastify.Fa
     throw new Error();
   }
 }
-
+//schema
 async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: SetWriteAccess;
   try {
     jbody = request.body as SetWriteAccess;
-    // validate<loginType>(jbody,schema.loginValidate);
+     //validate<SetWriteAccess>(jbody,schema.loginValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
 
@@ -770,11 +774,11 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
   }
 }
 
-
+//schema todo mostafa
 async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: TableRecall;
   try {
-    jbody = request.body as TableRecall;
+    jbody = request.body as  TableRecall;
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequestt" });
     throw new Error();
@@ -803,7 +807,8 @@ async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify
     }
 
     // Extract filters
-    const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) || [];
+    // I changed this section 
+    const filters: filter[] = jbody.filters?.map(([columnName, contain]) => ({ columnName, contain })) ?? [];
 
     // Pass filters to the tableDataOutput function if needed
     await tableDataOutput(tableID, filters, reply, jbody.pageNumber, jbody.pageSize);
@@ -829,56 +834,5 @@ export function PanelAPI(fastifier: fastify.FastifyInstance, prefix?: string): v
   fastifier.post(`${prefix ?? ""}/changeReadWritePermission`, changeReadWritePermission);
   fastifier.post(`${prefix ?? ""}/changepassword`, changePassword);
   fastifier.post(`${prefix ?? ""}/setwriteaccess`, setWriteAccess);
-  //fastifier.post(`${prefix ?? ""}/editwriteaccess`, editWriteAccess);
-}
 
-// async function editWriteAccess(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
-//   let jbody: changePasswordType;
-//   try {
-//     jbody = request.body as changePasswordType;
-//     // validate<loginType>(jbody,schema.loginValidate);
-//   } catch (e: unknown) {
-//     await reply.code(400).send({ message: "badrequestt" });
-//
-//     throw new Error();
-//   }
-//
-//   const token = jbody.token;
-//   const oldPass: string = jbody.oldPass;
-//   const newPass: string = jbody.newPass;
-//
-//   try {
-//     const user = await validateToken(token);
-//     if (user === null) {
-//       await reply.code(401).send({ message: "not authenticated" });
-//       return;
-//     }
-//     const userVal = JSON.parse(user) as User;
-//     const [RawValue] = await DB.conn.query<MySQLRowDataPacket[]>(
-//       `select *
-//        from user
-//        where id = ?`,
-//       [userVal.id]
-//     );
-//     const value = RawValue as User[];
-//     const auth: boolean = await bcrypt.compare(oldPass, value[0].password);
-//     if (auth) {
-//       await DB.conn.execute<MySQLRowDataPacket[]>(
-//         `update user
-//          SET password = ?
-//          where id = ?`,
-//         [await bcrypt.hash(newPass, 12), userVal.id]
-//       );
-//       await reply.code(200).send({ message: "updated" });
-//       return;
-//     } else {
-//       await reply.code(403).send({ message: "old password is wrong" });
-//       return;
-//     }
-//   } catch (e: unknown) {
-//     logError(e);
-//     await reply.code(500);
-//
-//     throw new Error();
-//   }
-// }
+}

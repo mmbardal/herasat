@@ -4,13 +4,14 @@ import { validateToken } from "@/check";
 import type { User } from "@/apis/v1/login";
 import { DB } from "@/db";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
-import type { GetTableBranchType } from "@/schema/vahed";
+import { GetTableBranchType, getTableBranchValidate } from "@/schema/vahed";
+import { validate } from "@/utils";
 
 async function table(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: GetTableBranchType;
   try {
     jbody = request.body as GetTableBranchType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetTableBranchType>(jbody,getTableBranchValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);

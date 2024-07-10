@@ -4,9 +4,11 @@ import { DB } from "@/db";
 import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
 import { checkPermission, validateToken } from "@/check";
-import type { getWriteAccess } from "@/schema/vahed";
+import type { getWriteAccess} from "@/schema/vahed";
+import { getWriteAccessValidate } from "@/schema/vahed";
 import type { User } from "./login";
-
+import { validate } from "@/utils";
+import { schema } from "@/schema/panel";
 export interface userInterface {
   id: number;
   first_name: string;
@@ -38,7 +40,7 @@ async function getDeputy(request: fastify.FastifyRequest, reply: fastify.Fastify
   let jbody: GetType;
   try {
     jbody = JSON.parse(request.body as string) as GetType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetType>(jbody,schema.getValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
@@ -69,7 +71,7 @@ async function getManagement(request: fastify.FastifyRequest, reply: fastify.Fas
   let jbody: GetManagerType;
   try {
     jbody = request.body as GetManagerType;
-    // validate<loginType>(jbody,schema.loginValidate);
+    validate<GetManagerType>(jbody,schema.getManagerValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
@@ -106,7 +108,7 @@ async function emp(request: fastify.FastifyRequest, reply: fastify.FastifyReply)
   let jbody: GetEmpType;
   try {
     jbody = request.body as GetEmpType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetEmpType>(jbody,schema.getEmpValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
@@ -141,7 +143,7 @@ async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyRe
   let jbody: GetUserType;
   try {
     jbody = request.body as GetUserType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetUserType>(jbody,schema.getUserValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
@@ -149,13 +151,14 @@ async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyRe
   }
 
   const token = jbody.token;
-  const username = jbody.username;
+
   try {
     const user = await validateToken(token);
     if (user === null) {
       await reply.code(401).send({ message: "not authenticated" });
       return;
     }
+    const userVal = JSON.parse(user) as User
     if (await checkPermission(token, "CP")) {
       const [value] = await DB.conn.execute<MySQLRowDataPacket[]>(
         `select id,
@@ -169,8 +172,8 @@ async function getUser(request: fastify.FastifyRequest, reply: fastify.FastifyRe
                 changeReadAccess,
                 GE
          from user
-         where username = ?`,
-        [username]
+         where id = ?`,
+        [userVal.id]
       );
       await reply.code(200).send({ user: value[0] });
       return;
@@ -189,7 +192,7 @@ async function table(request: fastify.FastifyRequest, reply: fastify.FastifyRepl
   let jbody: GetTableType;
   try {
     jbody = request.body as GetTableType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetTableType>(jbody,schema.getTableValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
@@ -294,7 +297,7 @@ async function getProv(request: fastify.FastifyRequest, reply: fastify.FastifyRe
   let jbody: GetType;
   try {
     jbody = request.body as GetType;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<GetType>(jbody,schema.getValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);
@@ -351,7 +354,7 @@ async function vahedTablePermission(request: fastify.FastifyRequest, reply: fast
   let jbody: getWriteAccess;
   try {
     jbody = request.body as getWriteAccess;
-    // validate<loginType>(jbody,schema.loginValidate);
+     validate<getWriteAccess>(jbody,getWriteAccessValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     logError(e);

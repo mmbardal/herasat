@@ -77,7 +77,7 @@ async function registerManager(request: fastify.FastifyRequest, reply: fastify.F
   let jbody: registerType;
   try {
     jbody = request.body as registerType;
-    // validate<loginType>(jbody,schema.loginValidate);
+    validate<registerType>(jbody,schema.registerValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     throw new Error();
@@ -134,7 +134,7 @@ async function registerExpert(request: fastify.FastifyRequest, reply: fastify.Fa
   let jbody: registerType;
   try {
     jbody = request.body as registerType;
-    // validate<loginType>(jbody,schema.loginValidate);
+    validate<registerType>(jbody,schema.registerValidate);
   } catch (e: unknown) {
     await reply.code(400).send({ message: "badrequest" });
     throw new Error();
