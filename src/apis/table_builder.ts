@@ -1,3 +1,4 @@
+import { Column } from "@/schema/panel";
 import { DB } from "../db";
 import { MySQLRowDataPacket } from "@fastify/mysql";
 
@@ -30,18 +31,6 @@ export async function tableBuilder(tableName: string): Promise<void> {
   console.log(queryField);
   await DB.conn.query<MySQLRowDataPacket[]>(`create table ${name}(${queryField});`)
 
-}
-
-export interface AddColumns {
-  token: string;
-  tableID: string;
-  columns: Column[]
-}
-
-export interface Column {
-  name: string;
-  type: string;
-  constraints?: string;
 }
 
 export async function addColumnsToTable(tableID: string, tableName: string, columns: Column[]): Promise<void> {

@@ -12,7 +12,7 @@ import type {
   searchType,
   TableRecall
 } from "@/schema/panel";
-import { comboRegexGenerator, searchActionType } from "@/schema/panel";
+import { AddColumns, comboRegexGenerator, searchActionType } from "@/schema/panel";
 
 import { DB } from "@/db";
 
@@ -20,7 +20,6 @@ import type { MySQLRowDataPacket } from "@fastify/mysql";
 import { logError } from "@/logger";
 import { changeReadAccessFunc, checkPermission, validateToken,checkExcelReadAccess } from "@/check";
 import { dateRegex, homeNumberRegex, nationalCodeRegex, numbers, phoneNumberRegex } from "@/constants";
-import type { AddColumns } from "../table_builder";
 import { tableBuilder, addColumnsToTable } from "../table_builder";
 import * as bcrypt from "bcrypt";
 import type { SetWriteAccess, Vahed } from "@/schema/vahed";
@@ -461,7 +460,7 @@ async function approve(request: fastify.FastifyRequest, reply: fastify.FastifyRe
     throw new Error();
   }
 }
-// not have schema todo: mostafa
+
 async function reusetable(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: AddColumns;
   try {
@@ -774,7 +773,6 @@ async function setWriteAccess(request: fastify.FastifyRequest, reply: fastify.Fa
   }
 }
 
-//schema todo mostafa
 async function retrieveTableData(request: fastify.FastifyRequest, reply: fastify.FastifyReply): Promise<void> {
   let jbody: TableRecall;
   try {

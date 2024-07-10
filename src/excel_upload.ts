@@ -1,14 +1,3 @@
-import fastify from 'fastify';
-//import * as fs from 'node:fs';
-import * as util from 'node:util';
-import { pipeline } from 'node:stream';
-
-const pump = util.promisify(pipeline);
-const app = fastify();
-
-
- 
-
 import { DB } from "./db";
 import ExcelJS from "exceljs";
 import * as fs from "fs";

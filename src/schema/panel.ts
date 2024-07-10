@@ -123,6 +123,42 @@ export interface newTable {
   tableName: string;
 }
 
+const addColumns = ajv.compile<AddColumns>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token", "tableID", "columns"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "tableID": { "type": "string" },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "constraints": { "type": "string" }
+        }
+      }
+    }
+  }
+});
+
+export interface AddColumns {
+  token: string;
+  tableID: string;
+  columns: Column[]
+}
+
+export interface Column {
+  name: string;
+  type: string;
+  constraints?: string;
+}
+
 const approveValidate = ajv.compile<ApproveType>({
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
@@ -348,12 +384,42 @@ export interface changePasswordType {
   newPass: string;
 }
 
+const tableRecallSchema = ajv.compile<TableRecall>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token", "tableID"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "tableID": { "type": "string" },
+    "filters": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          { "type": "string" },
+          { "type": "string" }
+        ],
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "pageNumber": { "type": "number", "minimum": 1 },
+    "pageSize": { "type": "number", "minimum": 1 }
+  }
+});
+
 export interface TableRecall {
   token: string;
   tableID: string;
   filters?: [string, string][];
   pageNumber?: number;
   pageSize?: number;
+}
+
+export interface filter {
+  columnName: string;
+  contain: string;
 }
 
 export interface ColumnProperties {
@@ -364,23 +430,19 @@ export interface ColumnProperties {
   comboBoxValues: string[];
 }
 
-export interface filter {
-  columnName: string;
-  contain: string;
-}
-
-export interface multipartString {
-  value: string;
-}
-
-export interface fileRequests {
-  token: multipartString;
-  tableID: multipartString;
-  vahedName?: multipartString;
-  provinceName?: multipartString;
-  approval?: multipartString;
-  file: any;
-}
+const excelRequestsSchema = ajv.compile<excelRequests>({
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["token", "tableID"],
+  "additionalProperties": false,
+  "properties": {
+    "token": { "type": "string" },
+    "tableID": { "type": "string" },
+    "vahedName": { "type": "string" },
+    "provinceName": { "type": "string" },
+    "approval": { "type": "string" }
+  }
+});
 
 export interface excelRequests {
   token: string;
@@ -403,5 +465,8 @@ export const schema = {
   getUserValidate,
   getTableValidate,
   changeReadPermission,
-  changePassword
+  changePassword,
+  addColumns,
+  tableRecallSchema,
+  excelRequestsSchema
 };
